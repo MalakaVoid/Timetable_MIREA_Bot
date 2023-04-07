@@ -1,8 +1,8 @@
 from openpyxl import load_workbook
 
 workbook = load_workbook('temp.xlsx')
-first_sheet = workbook.get_sheet_names()[0]
-ws = workbook.get_sheet_by_name(first_sheet)
+
+ws = workbook[workbook.sheetnames[0]]
 
 index = 0
 for i in range(1, 500):
