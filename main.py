@@ -1,10 +1,11 @@
 from aiogram import Dispatcher, Bot, executor,types
 from aiogram.types import ReplyKeyboardMarkup,ReplyKeyboardRemove, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.callback_data import CallbackData
-from aiogram.utils.callback_data import CallbackData
 from globals import TOKEN_API, sampleGroup
+from datetime import datetime, timedelta
 from keyboards import get_inline_keyboard
 import re
+
 bot = Bot(TOKEN_API)
 dp = Dispatcher(bot)
 
@@ -43,14 +44,18 @@ async def main_menu_message(callback):
 # #Inline kb обработчик
 @dp.callback_query_handler(lambda callback_querry: callback_querry.data.startswith('btn'))
 async def ik_cb_handler(callback: types.CallbackQuery):
+    #Выдача расписания на сегодня
     if callback.data=='today_btn':
-        await callback.message.edit_text(text=current_day_timetable(),
+        await callback.message.edit_text(text=current_day_timetable(datetime.today()),
                                    reply_markup=None)
+    if callback.data=='tommorow_btn':
+        one_day=timedelta(days=1)
+        await callback.message.edit_text(text=current_day_timetable(datetime.today()+one_day),
+                                         reply_markup=None)
 
-
-def current_day_timetable()->str:
-    return 'Сегодня\n' \
-           'траляля трубубу'
+#Получение расписания по дате!!!!!!!!!!!!!!!!!!
+def current_day_timetable(date)->str:
+    return f'Сегодня вот эта дата: {date}'
 
 if __name__== '__main__':
     executor.start_polling(dp, skip_updates=True)
