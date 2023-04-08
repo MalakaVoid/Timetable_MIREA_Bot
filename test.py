@@ -141,9 +141,15 @@ def current_day_timetable(group):
     index = group_index(str(group))
     workbook = load_workbook('temp.xlsx')
     ws = workbook[workbook.sheetnames[0]]
+    flag=False
     for j in range(4, 88):
+        if ws.cell(row=j, column=1).value != None:
+            flag= False
         if ws.cell(row=j, column=1).value == current_day_of_the_week():
-            print(ws.cell(row=j, column=1).value)
+            flag= True
+        if flag:
+            if ws.cell(row=j, column=1).value != None:
+                print(ws.cell(row=j, column=1).value)
             if ws.cell(row=j, column=index).value != "":
                 # Четность нечетность
                 if is_even_current():
@@ -181,7 +187,7 @@ def current_day_timetable(group):
                         else:
                             print()
 
-print(current_day_timetable("БСБО-10-21"))
+current_day_timetable("БСБО-10-21")
 
 
 
