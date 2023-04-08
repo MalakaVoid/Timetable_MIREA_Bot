@@ -8,29 +8,49 @@ import re
 bot = Bot(TOKEN_API)
 dp = Dispatcher(bot)
 
-
+#Обработчик команды /start
 @dp.message_handler(commands=['start'])
 async def start_command(message: types.Message)->None:
     await bot.send_message(chat_id=message.from_user.id, text="Добро пожаловать!\n"
                                                          "Чтобы получить расписание, введите номер вашей группы.\n"
                                                          "Формат: БСБО-10-21.")
     await message.delete()
-
+#Пока что обработчик ввода группы пользователем
 @dp.message_handler()
 async def all_message(message: types.Message):
     match= re.fullmatch(sampleGroup, message.text)
     if match != None:
         #функция проверки существования данной группы!!!!!!!!!!
-        #Добавление в базу данных id пользователя и номер группы!!!!!!!!!!!
-        await bot.send_message(message.from_user.id, text="Получить расписание на (выберите одно из указанных ниже)",
-                               reply_markup=get_inline_keyboard())
+        if is_group_availibale(message.text):
+            #Добавление в базу данных id пользователя и номер группы!!!!!!!!!!!
+            add_user_group_to_bd(message.from_user.id, message.text)
+            await bot.send_message(message.from_user.id, text="Получить расписание на (выберите одно из указанных ниже)",
+                                   reply_markup=get_inline_keyboard('main_menu'))
 
+
+#Проверка существования группы
+def is_group_availibale(group)->bool:
+    return True
+#Добавление группы и id пользователя в базу данных
+def add_user_group_to_bd(id, group):
+    print(id)
+
+#Главное меню
 async def main_menu_message(callback):
     await callback.message.edit_text(text="Получить расписание на (выберите одно из указанных ниже)",
-                                     reply_markup=get_inline_keyboard())
+                                     reply_markup=get_inline_keyboard('main_menu'))
 
+# #Inline kb обработчик
 @dp.callback_query_handler(lambda callback_querry: callback_querry.data.startswith('btn'))
 async def ik_cb_handler(callback: types.CallbackQuery):
+    if callback.data=='today_btn':
+        await callback.message.edit_text(text=current_day_timetable(),
+                                   reply_markup=None)
+
+
+def current_day_timetable()->str:
+    return 'Сегодня\n' \
+           'траляля трубубу'
 
 if __name__== '__main__':
     executor.start_polling(dp, skip_updates=True)
