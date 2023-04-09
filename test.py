@@ -50,6 +50,15 @@ def is_group_aviable(str_group):
     return flag
 
 # Вспомогательная функция определяющая четность или нечетность актуальной недели
+def is_even(str_date):
+    first_week = datetime(2023, 2, 5)
+    todaydate = from_string_datetime(str_date)
+    amountDays = todaydate - first_week
+    if (amountDays.days // 7) % 2 == 0:
+        return False
+    else:
+        return True
+
 def is_even_current():
     first_week = datetime(2023, 2, 5)
     todaydate = datetime.today()
@@ -77,9 +86,10 @@ def current_week_timetable(group):
     index = group_index(str(group))
     workbook = load_workbook('temp.xlsx')
     ws = workbook[workbook.sheetnames[0]]
+    str_output = ""
     for j in range(4, 88):
         if ws.cell(row=j, column=1).value != None:
-            print(ws.cell(row=j, column=1).value)
+            str_output += str(ws.cell(row=j, column=1).value) + "\n"
         if ws.cell(row=j, column=index).value != "":
             # Четность нечетность
             if is_even_current():
@@ -88,40 +98,41 @@ def current_week_timetable(group):
                     tmp = j
                     if ws.cell(row=j, column=3).value == None:
                         tmp = j - 1
-                    print(ws.cell(row=tmp, column=3).value, end=" || ")
-                    print(ws.cell(row=tmp, column=4).value, end=" || ")
+                    str_output += str(ws.cell(row=tmp, column=3).value) + " || "
+                    str_output += str(ws.cell(row=tmp, column=4).value) + " || "
                     # Вывод названия предмета
-                    print(ws.cell(row=j, column=index).value, end=" || ")
+                    str_output += str(ws.cell(row=j, column=index).value) + " || "
                     # Лекция или практика
-                    print(ws.cell(row=j, column=index + 1).value, end=" || ")
+                    str_output += str(ws.cell(row=j, column=index + 1).value) + " || "
                     # Аудитория
                     if ws.cell(row=j, column=index + 2).value != "":
-                        print(ws.cell(row=j, column=index + 2).value, end="\n")
+                        str_output += str(ws.cell(row=j, column=index + 2).value) + "\n"
                     else:
-                        print()
+                        str_output += "\n"
             else:
                 if ws.cell(row=j, column=5).value == "I":
                     # Время начало пары
                     tmp = j
                     if ws.cell(row=j, column=3).value == None:
                         tmp = j - 1
-                    print(ws.cell(row=tmp, column=3).value, end=" || ")
-                    print(ws.cell(row=tmp, column=4).value, end=" || ")
+                    str_output += str(ws.cell(row=tmp, column=3).value) + " || "
+                    str_output += str(ws.cell(row=tmp, column=4).value) + " || "
                     # Вывод названия предмета
-                    print(ws.cell(row=j, column=index).value, end=" || ")
+                    str_output += str(ws.cell(row=j, column=index).value) + " || "
                     # Лекция или практика
-                    print(ws.cell(row=j, column=index + 1).value, end=" || ")
+                    str_output += str(ws.cell(row=j, column=index + 1).value) + " || "
                     # Аудитория
                     if ws.cell(row=j, column=index + 2).value != "":
-                        print(ws.cell(row=j, column=index + 2).value, end="\n")
+                        str_output += str(ws.cell(row=j, column=index + 2).value) + "\n"
                     else:
-                        print()
+                        str_output += "\n"
+    return str_output
 
-# Вспомогательная функция определения актуального дня недели по его номеру
+# Вспомогательная функция определения дня недели по его номеру
 
-def current_day_of_the_week():
-    todaydate = datetime.today()
-    week_num = todaydate.isoweekday()
+def current_day_of_the_week(str_date):
+    datetime_date = from_string_datetime(str_date)
+    week_num = datetime_date.isoweekday()
     if week_num == 1:
         return "ПОНЕДЕЛЬНИК"
     elif week_num == 2:
@@ -135,59 +146,60 @@ def current_day_of_the_week():
     elif week_num == 6:
         return "СУББОТА"
 
-# Функция определения расписания на актуальный день
+# Функция определения расписания на конкретный день
 
-def current_day_timetable(group):
+def current_day_timetable(group, str_date):
     index = group_index(str(group))
     workbook = load_workbook('temp.xlsx')
     ws = workbook[workbook.sheetnames[0]]
+    str_output = ""
     flag=False
     for j in range(4, 88):
         if ws.cell(row=j, column=1).value != None:
-            flag= False
-        if ws.cell(row=j, column=1).value == current_day_of_the_week():
-            flag= True
+            flag = False
+        if ws.cell(row=j, column=1).value == current_day_of_the_week(str_date):
+            flag = True
         if flag:
             if ws.cell(row=j, column=1).value != None:
-                print(ws.cell(row=j, column=1).value)
+                str_output += str(ws.cell(row=j, column=1).value) + "\n"
             if ws.cell(row=j, column=index).value != "":
                 # Четность нечетность
-                if is_even_current():
-                    if ws.cell(row=j, column=5).value == "II":
+                if is_even(str_date) and ws.cell(row=j, column=5).value == "II":
                         # Время начало пары
                         tmp = j
                         if ws.cell(row=j, column=3).value == None:
                             tmp = j - 1
-                        print(ws.cell(row=tmp, column=3).value, end=" || ")
-                        print(ws.cell(row=tmp, column=4).value, end=" || ")
+                        str_output += str(ws.cell(row=tmp, column=3).value) + " || "
+                        str_output += str(ws.cell(row=tmp, column=4).value) + " || "
                         # Вывод названия предмета
-                        print(ws.cell(row=j, column=index).value, end=" || ")
+                        str_output += str(ws.cell(row=j, column=index).value) + " || "
                         # Лекция или практика
-                        print(ws.cell(row=j, column=index + 1).value, end=" || ")
+                        str_output += str(ws.cell(row=j, column=index + 1).value) + " || "
                         # Аудитория
                         if ws.cell(row=j, column=index + 2).value != "":
-                            print(ws.cell(row=j, column=index + 2).value, end="\n")
+                            str_output += str(ws.cell(row=j, column=index + 2).value) + "\n"
                         else:
-                            print()
-                else:
-                    if ws.cell(row=j, column=5).value == "I":
+                            str_output += "\n"
+                elif not(is_even(str_date)) and ws.cell(row=j, column=5).value == "I":
                         # Время начало пары
                         tmp = j
                         if ws.cell(row=j, column=3).value == None:
                             tmp = j - 1
-                        print(ws.cell(row=tmp, column=3).value, end=" || ")
-                        print(ws.cell(row=tmp, column=4).value, end=" || ")
+                        str_output += str(ws.cell(row=tmp, column=3).value) + " || "
+                        str_output += str(ws.cell(row=tmp, column=4).value) + " || "
                         # Вывод названия предмета
-                        print(ws.cell(row=j, column=index).value, end=" || ")
+                        str_output += str(ws.cell(row=j, column=index).value) + " || "
                         # Лекция или практика
-                        print(ws.cell(row=j, column=index + 1).value, end=" || ")
+                        str_output += str(ws.cell(row=j, column=index + 1).value) + " || "
                         # Аудитория
                         if ws.cell(row=j, column=index + 2).value != "":
-                            print(ws.cell(row=j, column=index + 2).value, end="\n")
+                            str_output += str(ws.cell(row=j, column=index + 2).value) + "\n"
                         else:
-                            print()
+                            str_output += "\n"
+    return str_output
 
-current_day_timetable("БСБО-10-21")
+print(current_day_timetable("БСБО-10-21", "11.04.2023"))
+print(current_week_timetable("БСБО-10-21"))
 
 
 
