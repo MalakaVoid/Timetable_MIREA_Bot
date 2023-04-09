@@ -22,9 +22,10 @@ class GroupStates(StatesGroup):
 #Обработчик команды /start
 @dp.message_handler(commands=['start'])
 async def start_command(message: types.Message, state: FSMContext)->None:
-    await bot.send_message(chat_id=message.from_user.id, text="Добро пожаловать!\n"
-                                                         "Чтобы получить расписание, введите номер вашей группы.\n"
-                                                         "Формат: БСБО-10-21.")
+    await bot.send_message(chat_id=message.from_user.id,
+                           text="Добро пожаловать!\n"
+                                "Чтобы получить расписание, введите номер вашей группы.\n"
+                                "Формат: БСБО-10-21.")
     await GroupStates.group.set()
     await message.delete()
 
@@ -42,10 +43,12 @@ async def get_group(message: types.Message, state: FSMContext):
         if is_group_availibale(message.text):
             #Добавление в базу данных id пользователя и номер группы!!!!!!!!!!!
             add_user_group_to_bd(message.from_user.id, message.text)
-            await bot.send_message(message.from_user.id, text="Получить расписание на (выберите одно из указанных ниже)",
+            await bot.send_message(message.from_user.id,
+                                   text="Получить расписание на (выберите одно из указанных ниже)",
                                    reply_markup=get_inline_keyboard('main_menu'))
         else:
-            await bot.send_message(chat_id=message.from_user.id,text="Не смогли найти данную группу. Попробуйте еще раз.")
+            await bot.send_message(chat_id=message.from_user.id,
+                                   text="Не смогли найти данную группу. Попробуйте еще раз.")
     else:
         await bot.send_message(chat_id=message.from_user.id,
                                text="Не правильный формат группы, попробуйте еще раз.")
