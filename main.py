@@ -2,7 +2,7 @@ from aiogram import Dispatcher, Bot, executor,types
 from aiogram.dispatcher import FSMContext
 from aiogram.types import ReplyKeyboardMarkup,ReplyKeyboardRemove, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.callback_data import CallbackData
-from globals import TOKEN_API, sampleGroup
+from globals import TOKEN_API, sampleGroup, sampleDate
 from datetime import datetime, timedelta
 from keyboards import get_inline_keyboard
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
@@ -46,9 +46,19 @@ async def get_group(message: types.Message, state: FSMContext):
                                text="Не правильный формат группы, попробуйте еще раз.")
     await state.finish()
 
+#Вывод расписания по конкретной дате
 @dp.message_handler(state=GroupStates.date)
 async def get_date(message: types.Message, state: FSMContext):
-    a=1
+    try:
+        entr_date=datetime.strptime(message.text, '%d.%m.%Y').date()
+        await bot.send_message(chat_id=message.from_user.id,
+                               text=current_day_timetable(entr_date),
+                               reply_markup=get_inline_keyboard("timetable"))
+        await state.finish()
+    except Exception:
+        await bot.send_message(chat_id=message.from_user.id,
+                               text='Неверный формат даты. Попробуйте еще раз')
+
 
 #Проверка существования группы
 def is_group_availibale(group)->bool:
@@ -102,7 +112,7 @@ async def ik_cb_handler(callback: types.CallbackQuery, state: FSMContext):
 
 #Получение расписания по дате!!!!!!!!!!!!!!!!!!
 def current_day_timetable(date)->str:
-    return f'Расписание на {date.day}.{date.month}.{date.year}'
+    return f'Расписание на {date.strftime("%d.%m.%Y")}'
 
 
 
