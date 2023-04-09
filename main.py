@@ -42,20 +42,32 @@ async def main_menu_message(callback):
                                      reply_markup=get_inline_keyboard('main_menu'))
 
 # #Inline kb обработчик
-@dp.callback_query_handler(lambda callback_querry: callback_querry.data.startswith('btn'))
+@dp.callback_query_handler(lambda callback_querry: callback_querry.data.endswith('btn'))
 async def ik_cb_handler(callback: types.CallbackQuery):
     #Выдача расписания на сегодня
     if callback.data=='today_btn':
         await callback.message.edit_text(text=current_day_timetable(datetime.today()),
-                                   reply_markup=None)
-    if callback.data=='tommorow_btn':
+                                   reply_markup=get_inline_keyboard("timetable"))
+    elif callback.data=='tommorow_btn':
         one_day=timedelta(days=1)
         await callback.message.edit_text(text=current_day_timetable(datetime.today()+one_day),
+                                         reply_markup=get_inline_keyboard("timetable"))
+    elif callback.data == 'current_date_btn':
+        a=1
+    elif callback.data == 'week_btn':
+        a=1
+    elif callback.data == 'change_group_num_btn':
+        await callback.message.edit_text(text="Введите номер группы.\n"
+                                              "Формат БСБО-10-21",
                                          reply_markup=None)
+    elif callback.data == 'next_day_btn':
+        a=1
+    elif callback.data == 'back_btn':
+        await main_menu_message(callback)
 
 #Получение расписания по дате!!!!!!!!!!!!!!!!!!
 def current_day_timetable(date)->str:
-    return f'Сегодня вот эта дата: {date}'
+    return f'Расписание на {date.day}.{date.month}.{date.year}'
 
 if __name__== '__main__':
     executor.start_polling(dp, skip_updates=True)

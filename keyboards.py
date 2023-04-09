@@ -9,5 +9,10 @@ def get_inline_keyboard(id)->InlineKeyboardMarkup:
             [InlineKeyboardButton('Эта неделя', callback_data='week_btn')],
             [InlineKeyboardButton('Изменить номер группы', callback_data='change_group_num_btn')]
         ])
+    if id == 'timetable':
+        ikb=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton('Следующий день', callback_data='next_day_btn')],
+            [InlineKeyboardButton('Назад', callback_data='back_btn')]
+        ])
     return ikb
 
