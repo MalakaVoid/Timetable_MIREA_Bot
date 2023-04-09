@@ -28,6 +28,11 @@ async def start_command(message: types.Message, state: FSMContext)->None:
     await GroupStates.group.set()
     await message.delete()
 
+#Удаление не нужных сообщений
+@dp.message_handler(state=None)
+async def del_messages(message: types.Message):
+    await message.delete()
+
 #Пока что обработчик ввода группы пользователем
 @dp.message_handler(state=GroupStates.group)
 async def get_group(message: types.Message, state: FSMContext):
@@ -73,8 +78,9 @@ async def main_menu_message(callback):
                                      reply_markup=get_inline_keyboard('main_menu'))
 
 # #Inline kb обработчик
-@dp.callback_query_handler(lambda callback_querry: callback_querry.data.endswith('btn'))
+@dp.callback_query_handler(lambda callback_querry: callback_querry.data.endswith('btn'), state='*')
 async def ik_cb_handler(callback: types.CallbackQuery, state: FSMContext):
+    print('flag')
     #Выдача расписания на сегодня
     if callback.data=='today_btn':
         await callback.message.edit_text(text=current_day_timetable(datetime.today()),
@@ -88,7 +94,7 @@ async def ik_cb_handler(callback: types.CallbackQuery, state: FSMContext):
     elif callback.data == 'current_date_btn':
         await GroupStates.date.set()
         await callback.message.edit_text(text='Введите дату в формате 00.00.0000',
-                                         reply_markup=get_inline_keyboard('back_from_entdate'))
+                                         reply_markup=get_inline_keyboard("back_from_enddate"))
     #Выдача расписания на неделю
     elif callback.data == 'week_btn':
         a=1
@@ -97,7 +103,7 @@ async def ik_cb_handler(callback: types.CallbackQuery, state: FSMContext):
         await GroupStates.group.set()
         await callback.message.edit_text(text="Введите номер группы.\n"
                                               "Формат БСБО-10-21",
-                                         reply_markup=None)
+                                         reply_markup=get_inline_keyboard('back_from_enddate'))
     #Обработка кнопки следующего дня в расписании
     elif callback.data == 'next_day_btn':
         a=1
@@ -106,8 +112,8 @@ async def ik_cb_handler(callback: types.CallbackQuery, state: FSMContext):
         await main_menu_message(callback)
     #Обработка кнопки отменить при вводе даты пользователем
     elif callback.data == 'back_enddate_btn':
-        await state.finish()
         await main_menu_message(callback)
+        await state.finish()
 
 
 #Получение расписания по дате!!!!!!!!!!!!!!!!!!
