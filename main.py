@@ -1,24 +1,36 @@
 from aiogram import Dispatcher, Bot, executor,types
+from aiogram.dispatcher import FSMContext
 from aiogram.types import ReplyKeyboardMarkup,ReplyKeyboardRemove, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.callback_data import CallbackData
 from globals import TOKEN_API, sampleGroup
 from datetime import datetime, timedelta
 from keyboards import get_inline_keyboard
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
+from aiogram.dispatcher.filters import Text
+from aiogram.dispatcher.filters.state import StatesGroup, State
 import re
 
 bot = Bot(TOKEN_API)
-dp = Dispatcher(bot)
+storage = MemoryStorage()
+dp = Dispatcher(bot,
+                storage=storage)
+#Состояния бота
+class GroupStates(StatesGroup):
+    group = State()
+    date = State()
 
 #Обработчик команды /start
 @dp.message_handler(commands=['start'])
-async def start_command(message: types.Message)->None:
+async def start_command(message: types.Message, state: FSMContext)->None:
     await bot.send_message(chat_id=message.from_user.id, text="Добро пожаловать!\n"
                                                          "Чтобы получить расписание, введите номер вашей группы.\n"
                                                          "Формат: БСБО-10-21.")
+    await GroupStates.group.set()
     await message.delete()
+
 #Пока что обработчик ввода группы пользователем
-@dp.message_handler()
-async def all_message(message: types.Message):
+@dp.message_handler(state=GroupStates.group)
+async def get_group(message: types.Message, state: FSMContext):
     match= re.fullmatch(sampleGroup, message.text)
     if match != None:
         #функция проверки существования данной группы!!!!!!!!!!
@@ -27,7 +39,16 @@ async def all_message(message: types.Message):
             add_user_group_to_bd(message.from_user.id, message.text)
             await bot.send_message(message.from_user.id, text="Получить расписание на (выберите одно из указанных ниже)",
                                    reply_markup=get_inline_keyboard('main_menu'))
+        else:
+            await bot.send_message(chat_id=message.from_user.id,text="Не смогли найти данную группу. Попробуйте еще раз.")
+    else:
+        await bot.send_message(chat_id=message.from_user.id,
+                               text="Не правильный формат группы, попробуйте еще раз.")
+    await state.finish()
 
+@dp.message_handler(state=GroupStates.date)
+async def get_date(message: types.Message, state: FSMContext):
+    a=1
 
 #Проверка существования группы
 def is_group_availibale(group)->bool:
@@ -43,31 +64,47 @@ async def main_menu_message(callback):
 
 # #Inline kb обработчик
 @dp.callback_query_handler(lambda callback_querry: callback_querry.data.endswith('btn'))
-async def ik_cb_handler(callback: types.CallbackQuery):
+async def ik_cb_handler(callback: types.CallbackQuery, state: FSMContext):
     #Выдача расписания на сегодня
     if callback.data=='today_btn':
         await callback.message.edit_text(text=current_day_timetable(datetime.today()),
                                    reply_markup=get_inline_keyboard("timetable"))
+    #Выдача расписания на завтра
     elif callback.data=='tommorow_btn':
         one_day=timedelta(days=1)
         await callback.message.edit_text(text=current_day_timetable(datetime.today()+one_day),
                                          reply_markup=get_inline_keyboard("timetable"))
+    #Выдача расписания на определенный день
     elif callback.data == 'current_date_btn':
-        a=1
+        await GroupStates.date.set()
+        await callback.message.edit_text(text='Введите дату в формате 00.00.0000',
+                                         reply_markup=get_inline_keyboard('back_from_entdate'))
+    #Выдача расписания на неделю
     elif callback.data == 'week_btn':
         a=1
+    #Смена номера группы
     elif callback.data == 'change_group_num_btn':
+        await GroupStates.group.set()
         await callback.message.edit_text(text="Введите номер группы.\n"
                                               "Формат БСБО-10-21",
                                          reply_markup=None)
+    #Обработка кнопки следующего дня в расписании
     elif callback.data == 'next_day_btn':
         a=1
+    #Обработка кнопки назад в расписании
     elif callback.data == 'back_btn':
         await main_menu_message(callback)
+    #Обработка кнопки отменить при вводе даты пользователем
+    elif callback.data == 'back_enddate_btn':
+        await state.finish()
+        await main_menu_message(callback)
+
 
 #Получение расписания по дате!!!!!!!!!!!!!!!!!!
 def current_day_timetable(date)->str:
     return f'Расписание на {date.day}.{date.month}.{date.year}'
+
+
 
 if __name__== '__main__':
     executor.start_polling(dp, skip_updates=True)

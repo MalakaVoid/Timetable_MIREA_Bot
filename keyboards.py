@@ -14,5 +14,10 @@ def get_inline_keyboard(id)->InlineKeyboardMarkup:
             [InlineKeyboardButton('Следующий день', callback_data='next_day_btn')],
             [InlineKeyboardButton('Назад', callback_data='back_btn')]
         ])
+    if id == 'back_from_entdate':
+        ikb=InlineKeyboardMarkup([
+            [InlineKeyboardButton("Отменить",
+                                  callback_data='back_enddate_btn')]
+        ])
     return ikb
 
