@@ -10,7 +10,7 @@ from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher.filters import Text
 from aiogram.dispatcher.filters.state import StatesGroup, State
 import re
-
+#Начальная инициализация
 bot = Bot(TOKEN_API)
 storage = MemoryStorage()
 dp = Dispatcher(bot,
@@ -18,7 +18,7 @@ dp = Dispatcher(bot,
 #Состояния бота
 class GroupStates(StatesGroup):
     group = State()
-    date = State()
+    group_first = State()
 
 #Обработчик команды /start
 @dp.message_handler(commands=['start'])
@@ -36,7 +36,7 @@ async def del_messages(message: types.Message):
     await message.delete()
 
 #Пока что обработчик ввода группы пользователем
-@dp.message_handler(state=GroupStates.group)
+@dp.message_handler(state=[GroupStates.group, GroupStates.group_first])
 async def get_group(message: types.Message, state: FSMContext):
     match= re.fullmatch(sampleGroup, message.text)
     if match != None:
@@ -51,30 +51,20 @@ async def get_group(message: types.Message, state: FSMContext):
         else:
             await bot.send_message(chat_id=message.from_user.id,
                                    text="Не смогли найти данную группу. Попробуйте еще раз.")
+            await state.finish()
+            await GroupStates.group.set()
     else:
         await bot.send_message(chat_id=message.from_user.id,
                                text="Не правильный формат группы, попробуйте еще раз.")
-
-#Вывод расписания по конкретной дате
-@dp.message_handler(state=GroupStates.date)
-async def get_date(message: types.Message, state: FSMContext):
-    try:
-        entr_date=datetime.strptime(message.text, '%d.%m.%Y').date()
-        await bot.send_message(chat_id=message.from_user.id,
-                               text=current_day_timetable(entr_date),
-                               reply_markup=get_inline_keyboard("timetable"))
         await state.finish()
-    except Exception:
-        await bot.send_message(chat_id=message.from_user.id,
-                               text='Неверный формат даты. Попробуйте еще раз')
-
+        await GroupStates.group.set()
 
 #Проверка существования группы
 def is_group_availibale(group)->bool:
     return True
 #Добавление группы и id пользователя в базу данных
 def add_user_group_to_bd(id, group):
-    print(id)
+    print(id, group)
 
 #Главное меню
 async def main_menu_message(callback):
@@ -93,32 +83,26 @@ async def ik_cb_main_handler(callback: types.CallbackQuery, state: FSMContext):
         one_day=timedelta(days=1)
         await callback.message.edit_text(text=current_day_timetable(datetime.today()+one_day),
                                          reply_markup=get_inline_keyboard("timetable"))
-    #Выдача расписания на определенный день
-    elif callback.data == 'current_date_main_btn':
-        await GroupStates.date.set()
-        await callback.message.edit_text(text='Введите дату в формате 00.00.0000',
-                                         reply_markup=get_inline_keyboard("back_from_enddate"))
     #Выдача расписания на неделю
     elif callback.data == 'week_main_btn':
         a=1
     #Смена номера группы
     elif callback.data == 'change_group_num_main_btn':
-        await GroupStates.group.set()
+        await GroupStates.group_first.set()
         await callback.message.edit_text(text="Введите номер группы.\n"
                                               "Формат БСБО-10-21",
                                          reply_markup=get_inline_keyboard('back_from_enddate'))
-
-    #Пробую календарь на вкус
-    if callback.data=='calendar_main_btn':
+    #Календарь
+    elif callback.data == 'calendar_main_btn':
         await callback.message.edit_text(text='Выберите дату:',
                                          reply_markup=await SimpleCalendar().start_calendar())
-
+#Handler календаря
 @dp.callback_query_handler(simple_cal_callback.filter())
 async def process_simple_calendar(callback_query: CallbackQuery, callback_data: dict):
     selected, date = await SimpleCalendar().process_selection(callback_query, callback_data)
     if selected:
         await callback_query.message.edit_text(text=current_day_timetable(date),
-            reply_markup=get_inline_keyboard('timetable')
+                                            reply_markup=get_inline_keyboard('timetable')
         )
 
 #Обработчик клавиатуры расписания
@@ -127,6 +111,8 @@ async def ik_cb_tmtb_handler(callback: types.CallbackQuery, state: FSMContext):
     # Обработка кнопки следующего дня в расписании
     if callback.data == 'next_day_tmtb_btn':
         a = 1
+    elif callback.data == 'prev_day_tmtb_btn':
+        a=1
     # Обработка кнопки назад в расписании
     elif callback.data == 'back_tmtb_btn':
         await main_menu_message(callback)
@@ -137,10 +123,17 @@ async def ik_cb_end_handler(callback: types.CallbackQuery, state: FSMContext):
     #Обработка кнопки отменить при вводе даты пользователем и ввода группы
     cur_state = await state.get_state()
     if callback.data == 'back_end_btn' and cur_state is not None:
-        await main_menu_message(callback)
+        if cur_state == 'GroupStates:group':
+            await bot.send_message(chat_id=callback.message.chat.id,
+                               text="Получить расписание на (выберите одно из указанных ниже)",
+                                reply_markup=get_inline_keyboard('main_menu'))
+            await callback.message.edit_reply_markup(reply_markup=None)
+        else:
+            await main_menu_message(callback)
         await state.finish()
     elif callback.data == 'back_end_btn':
         await callback.message.edit_reply_markup(reply_markup=None)
+
 
 #Получение расписания по дате!!!!!!!!!!!!!!!!!!
 def current_day_timetable(date)->str:
