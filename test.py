@@ -88,11 +88,11 @@ def current_week_timetable(group):
     ws = workbook[workbook.sheetnames[0]]
     str_output = ""
     for j in range(4, 88):
-        if ws.cell(row=j, column=1).value != None:
+        if ws.cell(row=j, column=1).value != None: #ПЕРЕДЕЛАТЬ
             str_output += str(ws.cell(row=j, column=1).value) + "\n"
         if ws.cell(row=j, column=index).value != "":
             # Четность нечетность
-            if is_even_current():
+            if is_even_current(): # ПЕРЕДЕЛАТЬ
                 if ws.cell(row=j, column=5).value == "II":
                     # Время начало пары
                     tmp = j
