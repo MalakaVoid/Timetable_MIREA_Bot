@@ -1,5 +1,6 @@
 import sqlite3
 from openpyxl import load_workbook
+import re
 
 def group_index(group):
     workbook = load_workbook('temp.xlsx')
@@ -15,8 +16,10 @@ def group_arr():
     array_of_groups = []
     workbook = load_workbook('temp.xlsx')
     ws = workbook[workbook.sheetnames[0]]
+    sampleGroup = '\w{4}-\d\d-\d\d'
     for i in range(1, 500):
-        if str(ws.cell(row=2, column=i).value)[0] == "Б":
+        match = re.match(sampleGroup, str(ws.cell(row=2, column=i).value))
+        if match != None:
             array_of_groups.append(ws.cell(row=2, column=i).value)
     return array_of_groups
 
@@ -76,5 +79,4 @@ def parse_group_to_database(group):
             sqlite_connection.commit()
 
 arr = group_arr()
-for each in arr:
-    parse_group_to_database(f"{each}")
+print(len(arr))
