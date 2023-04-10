@@ -65,11 +65,11 @@ def parse_group_to_database(group):
             # Лекция или практика
             lect_or_prac = str(ws.cell(row=j, column=index + 1).value)
             # Препод
-            if ws.cell(row=j, column=index + 2).value != "":
+            if ws.cell(row=j, column=index + 2).value != "" and ws.cell(row=j, column=index + 2).value != None:
                 teacher = str(ws.cell(row=j, column=index + 2).value)
             else:
                 teacher = ""
-            if ws.cell(row=j, column=index + 3).value != "":
+            if ws.cell(row=j, column=index + 3).value != "" and ws.cell(row=j, column=index + 3).value != None:
                 place = str(ws.cell(row=j, column=index + 3).value)
             else:
                 place = ""
@@ -79,4 +79,8 @@ def parse_group_to_database(group):
             sqlite_connection.commit()
 
 arr = group_arr()
-print(len(arr))
+k = 0
+for each in arr:
+    parse_group_to_database(f"{each}")
+    k += 1
+    print(k)
