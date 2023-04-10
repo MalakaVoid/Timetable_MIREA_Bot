@@ -1,3 +1,10 @@
 import sqlite3
-from openpyxl import load_workbook
 
+
+sqlite_connection = sqlite3.connect('Timetable_DB.db')
+cursor = sqlite_connection.cursor()
+
+sqlite_select_query = ""
+record = cursor.fetchall()
+print("Версия базы данных SQLite: ", record)
+cursor.close()
