@@ -85,7 +85,7 @@ async def ik_cb_main_handler(callback: types.CallbackQuery, state: FSMContext):
                                          reply_markup=get_inline_keyboard("timetable"))
     #Выдача расписания на неделю
     elif callback.data == 'week_main_btn':
-        a=1
+        ф=1
     #Смена номера группы
     elif callback.data == 'change_group_num_main_btn':
         await GroupStates.group_first.set()
@@ -138,8 +138,6 @@ async def ik_cb_end_handler(callback: types.CallbackQuery, state: FSMContext):
 #Получение расписания по дате!!!!!!!!!!!!!!!!!!
 def current_day_timetable(date)->str:
     return f'Расписание на {date.strftime("%d.%m.%Y")}'
-
-
 
 if __name__== '__main__':
     executor.start_polling(dp, skip_updates=True)
