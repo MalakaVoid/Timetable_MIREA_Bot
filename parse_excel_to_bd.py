@@ -51,7 +51,7 @@ def parse_group_to_database(group):
         teacher = ""
         if ws.cell(row=j, column=1).value != None:
             weekday_name = str(ws.cell(row=j, column=1).value)
-        if ws.cell(row=j, column=index).value != "":
+        if ws.cell(row=j, column=index).value != "" and ws.cell(row=j, column=index).value is not None:
             # Четность нечетность
             even = str(ws.cell(row=j, column=5).value)
             # Время начало пары
