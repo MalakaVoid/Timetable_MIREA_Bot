@@ -1,30 +1,6 @@
 from openpyxl import load_workbook
-from datetime import datetime, timedelta
-
-# Функция перевода даты из строки в datetime
-
-def from_string_datetime(str_date):
-    arr = []
-    if "." in str_date:
-        array_of_dates = str_date.split(".")
-        day = int(array_of_dates[0])
-        month = int(array_of_dates[1])
-        year = int(array_of_dates[2])
-        return datetime(year, month, day)
-    elif "/" in str_date:
-        array_of_dates = str_date.split("/")
-        day = int(array_of_dates[0])
-        month = int(array_of_dates[1])
-        year = int(array_of_dates[2])
-        return datetime(year, month, day)
-    elif " " in str_date:
-        array_of_dates = str_date.split()
-        day = int(array_of_dates[0])
-        month = int(array_of_dates[1])
-        year = int(array_of_dates[2])
-        return datetime(year, month, day).date
-    else:
-        return "error"
+from datetime import datetime, timedelta, date
+import sqlite3
 
 # Вспомогательная функция вывода списка состоящего из названий групп
 
@@ -50,9 +26,9 @@ def is_group_aviable(str_group):
     return flag
 
 # Вспомогательная функция определяющая четность или нечетность актуальной недели
-def is_even(str_date):
+def is_even(date):
     first_week = datetime(2023, 2, 5)
-    todaydate = from_string_datetime(str_date)
+    todaydate = date
     amountDays = todaydate - first_week
     if (amountDays.days // 7) % 2 == 0:
         return False
@@ -68,70 +44,42 @@ def is_even_current():
     else:
         return True
 
-# Вспомогательная функция определения индекса группы
-
-def group_index(group):
-    workbook = load_workbook('temp.xlsx')
-    ws = workbook[workbook.sheetnames[0]]
-    index = 0
-    for i in range(1, 500):
-        if ws.cell(row=2, column=i).value == str(group):
-            index = i
-            break
-    return index
-
 # Функция определения расписания на актуальную неделю
 
-def current_week_timetable(group):
-    index = group_index(str(group))
-    workbook = load_workbook('temp.xlsx')
-    ws = workbook[workbook.sheetnames[0]]
-    str_output = ""
-    for j in range(4, 88):
-        if ws.cell(row=j, column=1).value != None: #ПЕРЕДЕЛАТЬ
-            str_output += str(ws.cell(row=j, column=1).value) + "\n"
-        if ws.cell(row=j, column=index).value != "":
-            # Четность нечетность
-            if is_even_current(): # ПЕРЕДЕЛАТЬ
-                if ws.cell(row=j, column=5).value == "II":
-                    # Время начало пары
-                    tmp = j
-                    if ws.cell(row=j, column=3).value == None:
-                        tmp = j - 1
-                    str_output += str(ws.cell(row=tmp, column=3).value) + " || "
-                    str_output += str(ws.cell(row=tmp, column=4).value) + " || "
-                    # Вывод названия предмета
-                    str_output += str(ws.cell(row=j, column=index).value) + " || "
-                    # Лекция или практика
-                    str_output += str(ws.cell(row=j, column=index + 1).value) + " || "
-                    # Аудитория
-                    if ws.cell(row=j, column=index + 2).value != "":
-                        str_output += str(ws.cell(row=j, column=index + 2).value) + "\n"
-                    else:
-                        str_output += "\n"
-            else:
-                if ws.cell(row=j, column=5).value == "I":
-                    # Время начало пары
-                    tmp = j
-                    if ws.cell(row=j, column=3).value == None:
-                        tmp = j - 1
-                    str_output += str(ws.cell(row=tmp, column=3).value) + " || "
-                    str_output += str(ws.cell(row=tmp, column=4).value) + " || "
-                    # Вывод названия предмета
-                    str_output += str(ws.cell(row=j, column=index).value) + " || "
-                    # Лекция или практика
-                    str_output += str(ws.cell(row=j, column=index + 1).value) + " || "
-                    # Аудитория
-                    if ws.cell(row=j, column=index + 2).value != "":
-                        str_output += str(ws.cell(row=j, column=index + 2).value) + "\n"
-                    else:
-                        str_output += "\n"
+def current_week_timetable(user_id):
+    arr_of_parameters = []
+    arr_days = ["ПОНЕДЕЛЬНИК", "ВТОРНИК", "СРЕДА", "ЧЕТВЕРГ", "ПЯТНИЦА", "СУББОТА"]
+    str_output = "<b>Расписание на текущую неделю</b>" + "\n\n"
+    sqlite_connection = sqlite3.connect('Timetable_DB.db')
+    cursor = sqlite_connection.cursor()
+    question_to_database1 = cursor.execute(f"SELECT group_num FROM User WHERE user_tg_id = '{user_id}'")
+    group = question_to_database1.fetchall()[0][0]
+    datetime_date_input = datetime.today()
+    current_date = current_day_of_the_week(datetime_date_input)
+    if is_even(datetime_date_input):
+        even_num = "II"
+    else:
+        even_num = "I"
+    question_to_database = cursor.execute(
+        f"SELECT interval_pairs, name, type, place, teacher_name, day_of_week FROM timetable WHERE group_num = '{group}' AND even = '{even_num}'")
+    arr_of_parameters = question_to_database.fetchall()
+    for each_day in arr_days:
+        str_output += "<b>" + each_day + "</b>" + "\n"
+        for each in arr_of_parameters:
+            if each[5] == each_day:
+                time = each[0]
+                time = time.replace("-", ":")
+                time = time.replace(" ", "-")
+                str_output += "<b>" + time + "</b>" + "\n"
+                str_output += "<em>" + each[1] + "</em>" + "\n"
+                str_output += each[2] + " | " + each[3] + " | " + each[4] + "\n\n"
+        str_output += "\n"
     return str_output
 
 # Вспомогательная функция определения дня недели по его номеру
 
-def current_day_of_the_week(str_date):
-    datetime_date = from_string_datetime(str_date)
+def current_day_of_the_week(date):
+    datetime_date = date
     week_num = datetime_date.isoweekday()
     if week_num == 1:
         return "ПОНЕДЕЛЬНИК"
@@ -148,59 +96,27 @@ def current_day_of_the_week(str_date):
 
 # Функция определения расписания на конкретный день
 
-def current_day_timetable(group, str_date):
-    index = group_index(str(group))
-    workbook = load_workbook('temp.xlsx')
-    ws = workbook[workbook.sheetnames[0]]
-    str_output = ""
-    flag=False
-    for j in range(4, 88):
-        if ws.cell(row=j, column=1).value != None:
-            flag = False
-        if ws.cell(row=j, column=1).value == current_day_of_the_week(str_date):
-            flag = True
-        if flag:
-            if ws.cell(row=j, column=1).value != None:
-                str_output += str(ws.cell(row=j, column=1).value) + "\n"
-            if ws.cell(row=j, column=index).value != "":
-                # Четность нечетность
-                if is_even(str_date) and ws.cell(row=j, column=5).value == "II":
-                        # Время начало пары
-                        tmp = j
-                        if ws.cell(row=j, column=3).value == None:
-                            tmp = j - 1
-                        str_output += str(ws.cell(row=tmp, column=3).value) + " || "
-                        str_output += str(ws.cell(row=tmp, column=4).value) + " || "
-                        # Вывод названия предмета
-                        str_output += str(ws.cell(row=j, column=index).value) + " || "
-                        # Лекция или практика
-                        str_output += str(ws.cell(row=j, column=index + 1).value) + " || "
-                        # Аудитория
-                        if ws.cell(row=j, column=index + 2).value != "":
-                            str_output += str(ws.cell(row=j, column=index + 2).value) + "\n"
-                        else:
-                            str_output += "\n"
-                elif not(is_even(str_date)) and ws.cell(row=j, column=5).value == "I":
-                        # Время начало пары
-                        tmp = j
-                        if ws.cell(row=j, column=3).value == None:
-                            tmp = j - 1
-                        str_output += str(ws.cell(row=tmp, column=3).value) + " || "
-                        str_output += str(ws.cell(row=tmp, column=4).value) + " || "
-                        # Вывод названия предмета
-                        str_output += str(ws.cell(row=j, column=index).value) + " || "
-                        # Лекция или практика
-                        str_output += str(ws.cell(row=j, column=index + 1).value) + " || "
-                        # Аудитория
-                        if ws.cell(row=j, column=index + 2).value != "":
-                            str_output += str(ws.cell(row=j, column=index + 2).value) + "\n"
-                        else:
-                            str_output += "\n"
+def current_day_timetable(user_id, datetime_date_input):
+    arr_of_parameters = []
+    sqlite_connection = sqlite3.connect('Timetable_DB.db')
+    cursor = sqlite_connection.cursor()
+    question_to_database1 = cursor.execute(f"SELECT group_num FROM User WHERE user_tg_id = '{user_id}'")
+    group = question_to_database1.fetchall()[0][0]
+    current_date = current_day_of_the_week(datetime_date_input)
+    str_output = f"<b>Расписание на {datetime_date_input.strftime('%d.%m.%Y')}</b>" + "\n\n"
+    if is_even(datetime_date_input):
+        even_num = "II"
+    else:
+        even_num = "I"
+    question_to_database = cursor.execute(f"SELECT interval_pairs, name, type, place, teacher_name FROM timetable WHERE group_num = '{group}' AND day_of_week = '{current_date}' AND even = '{even_num}'")
+    arr_of_parameters = question_to_database.fetchall()
+    for each in arr_of_parameters:
+        time = each[0]
+        time = time.replace("-", ":")
+        time = time.replace(" ", "-")
+        str_output += "<b>" + time + "</b>" + "\n"
+        str_output += "<em>" + each[1] + "</em>" + "\n"
+        str_output += each[2] + " | " + each[3] + " | " + each[4] + "\n\n"
     return str_output
 
-print(current_day_timetable("БСБО-10-21", "11.04.2023"))
-print(current_week_timetable("БСБО-10-21"))
-
-
-
-
+print(current_week_timetable("1224454"))
