@@ -2,6 +2,13 @@ import sqlite3
 from openpyxl import load_workbook
 import re
 
+sqlite_connection = sqlite3.connect('Timetable_DB.db')
+cursor = sqlite_connection.cursor()
+user_id = "1224454"
+question_to_database = cursor.execute(f"SELECT group_num FROM User WHERE user_tg_id = '{user_id}'")
+group = question_to_database.fetchall()[0][0]
+print(len(group))
+
 def group_index(group):
     workbook = load_workbook('temp.xlsx')
     ws = workbook[workbook.sheetnames[0]]
@@ -22,6 +29,8 @@ def group_arr():
         if match != None:
             array_of_groups.append(ws.cell(row=2, column=i).value)
     return array_of_groups
+
+
 
 def group_to_bd(user_id, group):
     sqlite_connection = sqlite3.connect('Timetable_DB.db')
@@ -77,10 +86,3 @@ def parse_group_to_database(group):
                                    f"VALUES ('{group}', '{even}', '{weekday_name}', '{time}', '{subject_name}', '{lect_or_prac}', '{place}', '{teacher}')"
             cursor.execute(question_to_database)
             sqlite_connection.commit()
-
-arr = group_arr()
-k = 0
-for each in arr:
-    parse_group_to_database(f"{each}")
-    k += 1
-    print(k)
