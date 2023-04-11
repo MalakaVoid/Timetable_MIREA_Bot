@@ -23,18 +23,6 @@ def group_arr():
             array_of_groups.append(ws.cell(row=2, column=i).value)
     return array_of_groups
 
-def group_to_bd(user_id, group):
-    sqlite_connection = sqlite3.connect('Timetable_DB.db')
-    cursor = sqlite_connection.cursor()
-    question_to_database = cursor.execute(f"SELECT user_tg_id FROM User WHERE user_tg_id = '{user_id}'")
-    if question_to_database.fetchall() == []:
-        insert_user_id = f"INSERT INTO User (user_tg_id, group_num) VALUES ('{user_id}', '{group}')"
-        cursor.execute(insert_user_id)
-    else:
-        update_user_id = f"UPDATE User SET group_num = '{group}' WHERE user_tg_id = '{user_id}'"
-        cursor.execute(update_user_id)
-    sqlite_connection.commit()
-
 def parse_group_to_database(group):
     workbook = load_workbook('temp.xlsx')
     ws = workbook[workbook.sheetnames[0]]
