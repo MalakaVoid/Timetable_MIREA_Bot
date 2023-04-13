@@ -1,5 +1,6 @@
 from openpyxl import load_workbook
 from datetime import datetime, timedelta
+import sqlite3
 
 def group_index(group):
     workbook = load_workbook('temp.xlsx')
@@ -50,5 +51,3 @@ def current_week_timetable(group):
             else:
                 str_output += "\n"
     return str_output
-
-print(current_week_timetable("БСБО-10-21"))
