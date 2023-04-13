@@ -73,21 +73,24 @@ async def main_menu_message(callback):
 @dp.callback_query_handler(lambda callback_querry: callback_querry.data.endswith('main_btn'), state='*')
 async def ik_cb_main_handler(callback: types.CallbackQuery, state: FSMContext):
     #Выдача расписания на сегодня
-    if callback.data=='today_main_btn':
-        await callback.message.edit_text(text=current_day_timetable(callback.message.chat.id
-                                                                    ,datetime.today()),
+    if callback.data == 'today_main_btn':
+        str_result = current_day_timetable(callback.message.chat.id,
+                                         datetime.today())
+        await callback.message.edit_text(text=str_result,
                                          reply_markup=get_inline_keyboard("timetable"),
                                          parse_mode="HTML")
     #Выдача расписания на завтра
-    elif callback.data=='tommorow_main_btn':
+    elif callback.data == 'tommorow_main_btn':
         one_day=timedelta(days=1)
-        await callback.message.edit_text(text=current_day_timetable(callback.message.chat.id
-                                                                    ,datetime.today()+one_day),
+        str_result = current_day_timetable(callback.message.chat.id,
+                                           datetime.today()+one_day)
+        await callback.message.edit_text(text=str_result,
                                          reply_markup=get_inline_keyboard("timetable"),
                                          parse_mode="HTML")
     #Выдача расписания на неделю
     elif callback.data == 'week_main_btn':
-        await callback.message.edit_text(text = current_week_timetable(callback.message.chat.id),
+        str_result = current_week_timetable(callback.message.chat.id)
+        await callback.message.edit_text(text=str_result,
                                          reply_markup=get_inline_keyboard('back_from_week_table'),
                                          parse_mode="HTML")
     #Смена номера группы
@@ -104,12 +107,14 @@ async def ik_cb_main_handler(callback: types.CallbackQuery, state: FSMContext):
 #Handler календаря
 @dp.callback_query_handler(simple_cal_callback.filter())
 async def process_simple_calendar(callback_query: CallbackQuery, callback_data: dict):
-    selected, date = await SimpleCalendar().process_selection(callback_query, callback_data)
+    selected, date = await SimpleCalendar().process_selection(callback_query,
+                                                              callback_data)
     if selected:
-        await callback_query.message.edit_text(text=current_day_timetable(callback_query.message.chat.id,
-                                                                          date),
-                                            reply_markup=get_inline_keyboard('timetable'),
-                                            parse_mode="HTML"
+        str_result = current_day_timetable(callback_query.message.chat.id,
+                                           date)
+        await callback_query.message.edit_text(text=str_result,
+                                               reply_markup=get_inline_keyboard('timetable'),
+                                               parse_mode="HTML"
         )
 
 #Обработчик клавиатуры расписания
@@ -118,19 +123,22 @@ async def ik_cb_tmtb_handler(callback: types.CallbackQuery, state: FSMContext):
     # Обработка кнопки следующего дня в расписании
     one_day = timedelta(days=1)
     if callback.data == 'next_day_tmtb_btn':
+
         date = datetime.strptime(re.findall(sampleDate,
                                             callback.message.text)[0],
                                             "%d.%m.%Y")
-        await callback.message.edit_text(text=current_day_timetable(callback.message.chat.id,
-                                                                    date+one_day),
+        str_result = current_day_timetable(callback.message.chat.id,
+                                           date+one_day)
+        await callback.message.edit_text(text= str_result,
                                          reply_markup=get_inline_keyboard("timetable"),
                                          parse_mode="HTML")
     elif callback.data == 'prev_day_tmtb_btn':
         date = datetime.strptime(re.findall(sampleDate,
                                             callback.message.text)[0],
                                             "%d.%m.%Y")
-        await callback.message.edit_text(text=current_day_timetable(callback.message.chat.id,
-                                                                    date - one_day),
+        str_result = current_day_timetable(callback.message.chat.id,
+                                           date - one_day)
+        await callback.message.edit_text(text=str_result,
                                          reply_markup=get_inline_keyboard("timetable"),
                                          parse_mode="HTML")
     # Обработка кнопки назад в расписании
@@ -145,8 +153,8 @@ async def ik_cb_end_handler(callback: types.CallbackQuery, state: FSMContext):
     if callback.data == 'back_end_btn' and cur_state is not None:
         if cur_state == 'GroupStates:group':
             await bot.send_message(chat_id=callback.message.chat.id,
-                               text="<b>Получить расписание на (выберите одно из указанных ниже)</b>",
-                                reply_markup=get_inline_keyboard('main_menu'),
+                                   text="<b>Получить расписание на (выберите одно из указанных ниже)</b>",
+                                   reply_markup=get_inline_keyboard('main_menu'),
                                    parse_mode="HTML")
             await callback.message.edit_reply_markup(reply_markup=None)
         else:
