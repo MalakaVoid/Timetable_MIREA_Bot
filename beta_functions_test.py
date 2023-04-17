@@ -51,3 +51,9 @@ def current_week_timetable(group):
             else:
                 str_output += "\n"
     return str_output
+
+
+
+def delete_event():
+    return 0
+

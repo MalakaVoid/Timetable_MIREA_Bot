@@ -120,3 +120,18 @@ def group_to_bd(user_id, group):
     sqlite_connection.commit()
 
 
+def enter_event(chat_id, date, time, event):
+    arr_of_parameters = []
+    sqlite_connection = sqlite3.connect('Timetable_DB.db')
+    cursor = sqlite_connection.cursor()
+    question_to_database = cursor.execute("SELECT date, event, time FROM user_events WHERE user_tg_id = {chat_id}")
+    if question_to_database.fetchall() == []:
+        question_to_database = cursor.execute(f"INSERT INTO user_events (user_tg_id, date, event, time) VALUES ('{chat_id}', '{date}', '{event}', '{time}')")
+        sqlite_connection.commit()
+        return "Расписание добавлено"
+    else:
+        return "Вы можете только обновить данные из таблицы."
+
+def update_date_event():
+    return 0
+
