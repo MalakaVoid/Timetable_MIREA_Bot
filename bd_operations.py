@@ -1,8 +1,5 @@
-from openpyxl import load_workbook
 from datetime import datetime, timedelta, date
 import sqlite3
-
-# Функция проверки наличия группы
 
 def is_group_aviable(str_group):
     sqlite_connection = sqlite3.connect('Timetable_DB.db')
@@ -13,7 +10,6 @@ def is_group_aviable(str_group):
     else:
         return True
 
-# Вспомогательная функция определяющая четность или нечетность актуальной недели
 def is_even(date):
     first_week = datetime(2023, 2, 5)
     todaydate = date
@@ -31,8 +27,6 @@ def is_even_current():
         return False
     else:
         return True
-
-# Функция определения расписания на актуальную неделю
 
 def current_week_timetable(user_id):
     arr_of_parameters = []
@@ -64,8 +58,6 @@ def current_week_timetable(user_id):
         str_output += "\n"
     return str_output
 
-# Вспомогательная функция определения дня недели по его номеру
-
 def current_day_of_the_week(date):
     datetime_date = date
     week_num = datetime_date.isoweekday()
@@ -81,8 +73,6 @@ def current_day_of_the_week(date):
         return "ПЯТНИЦА"
     elif week_num == 6:
         return "СУББОТА"
-
-# Функция определения расписания на конкретный день
 
 def current_day_timetable(user_id, datetime_date_input):
     arr_of_parameters = []
@@ -105,6 +95,7 @@ def current_day_timetable(user_id, datetime_date_input):
         str_output += "<b>" + time + "</b>" + "\n"
         str_output += "<em>" + each[1] + "</em>" + "\n"
         str_output += each[2] + " | " + each[3] + " | " + each[4] + "\n\n"
+    str_output += current_day_events(user_id, datetime_date_input)
     return str_output
 
 def group_to_bd(user_id, group):
@@ -119,19 +110,53 @@ def group_to_bd(user_id, group):
         cursor.execute(update_user_id)
     sqlite_connection.commit()
 
-
 def enter_event(chat_id, date, time, event):
     arr_of_parameters = []
     sqlite_connection = sqlite3.connect('Timetable_DB.db')
     cursor = sqlite_connection.cursor()
-    question_to_database = cursor.execute("SELECT date, event, time FROM user_events WHERE user_tg_id = {chat_id}")
+    question_to_database = cursor.execute(f"SELECT date, event, time FROM user_events WHERE user_tg_id = '{chat_id}' AND date = '{date}'")
     if question_to_database.fetchall() == []:
-        question_to_database = cursor.execute(f"INSERT INTO user_events (user_tg_id, date, event, time) VALUES ('{chat_id}', '{date}', '{event}', '{time}')")
-        sqlite_connection.commit()
-        return "Расписание добавлено"
+        cursor.execute(f"INSERT INTO user_events (user_tg_id, date, event, time, event_id) VALUES ('{chat_id}', '{date}', '{event}', '{time}', '1')")
     else:
-        return "Вы можете только обновить данные из таблицы."
+        arr_of_parameters = question_to_database.fetchall()
+        event_index = len(arr_of_parameters) + 1
+        cursor.execute(f"INSERT INTO user_events (user_tg_id, date, event, time, event_id) VALUES ('{chat_id}', '{date}', '{event}', '{time}', '{event_index}')")
+    sqlite_connection.commit()
+    return "Ивент добавлен"
 
-def update_date_event():
-    return 0
+def update_description_event(event, event_id, chat_id, date):
+    sqlite_connection = sqlite3.connect('Timetable_DB.db')
+    cursor = sqlite_connection.cursor()
+    question_to_database = f"UPDATE user_events SET event = '{event}' WHERE event_id = '{event_id}' AND user_tg_id = '{chat_id}' AND date = '{date}'"
+    cursor.execute(question_to_database)
+    sqlite_connection.commit()
+    return "Описание ивента обновлёно"
 
+def update_time_event(time, event_id, chat_id, date):
+    sqlite_connection = sqlite3.connect('Timetable_DB.db')
+    cursor = sqlite_connection.cursor()
+    question_to_database = f"UPDATE user_events SET event = '{time}' WHERE event_id = '{event_id}' AND user_tg_id = '{chat_id}' AND date = '{date}'"
+    cursor.execute(question_to_database)
+    sqlite_connection.commit()
+    return "Время ивента обновлёно"
+
+def current_day_events(user_id, datetime_date_input):
+    str_output = "================================" + "\n\n"
+    arr_of_parameters = []
+    sqlite_connection = sqlite3.connect('Timetable_DB.db')
+    cursor = sqlite_connection.cursor()
+    question_to_database = cursor.execute(f"SELECT event_id, time, event FROM user_events WHERE user_tg_id = '{user_id}' AND date = '{datetime_date_input}'")
+    arr_of_parameters = question_to_database.fetchall()
+    for arr in arr_of_parameters:
+        for each_parametr in arr:
+            str_output += "<b>" + each_parametr + "</b>" + " "
+        str_output += "\n"
+    return str_output
+
+def delete_event(event_id, chat_id, date):
+    sqlite_connection = sqlite3.connect('Timetable_DB.db')
+    cursor = sqlite_connection.cursor()
+    question_to_database = f"DELETE FROM user_events WHERE event_id = '{event_id}' AND user_tg_id = '{chat_id}' AND date = '{date}'"
+    cursor.execute(question_to_database)
+    sqlite_connection.commit()
+    return "Ивент удалён"
