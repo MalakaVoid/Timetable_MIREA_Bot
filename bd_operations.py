@@ -96,8 +96,8 @@ def current_day_timetable(user_id, datetime_date_input):
         str_output += "<b>" + time + "</b>" + "\n"
         str_output += "<em>" + each[1] + "</em>" + "\n"
         str_output += each[2] + " | " + each[3] + " | " + each[4] + "\n\n"
-    if datetime_date_input < datetime.today():
-        str_output += current_day_events(user_id, datetime_date_input)
+
+    str_output += current_day_events(user_id, datetime_date_input)
     return str_output
 
 def group_to_bd(user_id, group):
@@ -116,14 +116,14 @@ def enter_event(chat_id, date, time, event):
     arr_of_parameters = []
     sqlite_connection = sqlite3.connect('Timetable_DB.db')
     cursor = sqlite_connection.cursor()
-    question_to_database = cursor.execute(f"SELECT date, event, time FROM user_events WHERE user_tg_id = '{chat_id}' AND date = '{date}'")
+    question_to_database = cursor.execute(f"SELECT date, event, time FROM user_events WHERE user_tg_id = '{chat_id}' AND date = '{date.date()}'")
     arr_of_parameters = question_to_database.fetchall()
     if arr_of_parameters == []:
-        cursor.execute(f"INSERT INTO user_events (user_tg_id, date, event, time, event_id) VALUES ('{chat_id}', '{date}', '{event}', '{time}', '1')")
+        cursor.execute(f"INSERT INTO user_events (user_tg_id, date, event, time, event_id) VALUES ('{chat_id}', '{date.date()}', '{event}', '{time}', '1')")
         sqlite_connection.commit()
     else:
         event_index = len(arr_of_parameters) + 1
-        cursor.execute(f"INSERT INTO user_events (user_tg_id, date, event, time, event_id) VALUES ('{chat_id}', '{date}', '{event}', '{time}', '{event_index}')")
+        cursor.execute(f"INSERT INTO user_events (user_tg_id, date, event, time, event_id) VALUES ('{chat_id}', '{date.date()}', '{event}', '{time}', '{event_index}')")
         sqlite_connection.commit()
     update_and_sort_events_by_id(date, chat_id)
     return "Ивент добавлен"
@@ -131,7 +131,7 @@ def enter_event(chat_id, date, time, event):
 def update_description_event(event, event_id, chat_id, date):
     sqlite_connection = sqlite3.connect('Timetable_DB.db')
     cursor = sqlite_connection.cursor()
-    question_to_database = f"UPDATE user_events SET event = '{event}' WHERE event_id = '{event_id}' AND user_tg_id = '{chat_id}' AND date = '{date}'"
+    question_to_database = f"UPDATE user_events SET event = '{event}' WHERE event_id = '{event_id}' AND user_tg_id = '{chat_id}' AND date = '{date.date()}'"
     cursor.execute(question_to_database)
     sqlite_connection.commit()
     return "Описание ивента обновлёно"
@@ -139,38 +139,40 @@ def update_description_event(event, event_id, chat_id, date):
 def update_time_event(time, event_id, chat_id, date):
     sqlite_connection = sqlite3.connect('Timetable_DB.db')
     cursor = sqlite_connection.cursor()
-    question_to_database = f"UPDATE user_events SET time = '{time}' WHERE event_id = '{event_id}' AND user_tg_id = '{chat_id}' AND date = '{date}'"
+    question_to_database = f"UPDATE user_events SET time = '{time}' WHERE event_id = '{event_id}' AND user_tg_id = '{chat_id}' AND date = '{date.date()}'"
     cursor.execute(question_to_database)
     sqlite_connection.commit()
     update_and_sort_events_by_id(date, chat_id)
     return "Время ивента обновлёно"
 
 def current_day_events(user_id, datetime_date_input):
-    str_output = "================================" + "\n\n"
+    str_output = ""
     arr_of_parameters = []
     sqlite_connection = sqlite3.connect('Timetable_DB.db')
     cursor = sqlite_connection.cursor()
-    question_to_database = cursor.execute(f"SELECT event_id, time, event FROM user_events WHERE user_tg_id = '{user_id}' AND date = '{datetime_date_input}' ORDER BY event_id")
+    question_to_database = cursor.execute(f"SELECT event_id, time, event FROM user_events WHERE user_tg_id = '{user_id}' AND date = '{datetime_date_input.date()}' ORDER BY event_id")
     arr_of_parameters = question_to_database.fetchall()
-    for arr in arr_of_parameters:
-        for each_parametr in arr:
-            str_output += "<b>" + each_parametr + "</b>" + " "
+    if event_existense(datetime_date_input, user_id):
+        str_output += "<b>СОБЫТИЯ</b>" + "\n"
+    for each in arr_of_parameters:
+        str_output += "<b>" + each[0] + "</b> - <em>"+each[1] + " " + each[2] + "</em>"
         str_output += "\n"
     return str_output
 
 def delete_event(event_id, chat_id, date):
     sqlite_connection = sqlite3.connect('Timetable_DB.db')
     cursor = sqlite_connection.cursor()
-    question_to_database = f"DELETE FROM user_events WHERE event_id = '{event_id}' AND user_tg_id = '{chat_id}' AND date = '{date}'"
+    question_to_database = f"DELETE FROM user_events WHERE event_id = '{event_id}' AND user_tg_id = '{chat_id}' AND date = '{date.date()}'"
     cursor.execute(question_to_database)
     sqlite_connection.commit()
+    update_and_sort_events_by_id(date, chat_id)
     return "Ивент удалён"
 
 def update_and_sort_events_by_id(datetime_date_input, chat_id):
     arr_of_time = []
     sqlite_connection = sqlite3.connect('Timetable_DB.db')
     cursor = sqlite_connection.cursor()
-    question_to_database = f"SELECT time, id from user_events WHERE user_tg_id = '{chat_id}' AND date = '{datetime_date_input}' ORDER BY time(time)"
+    question_to_database = f"SELECT time, id from user_events WHERE user_tg_id = '{chat_id}' AND date = '{datetime_date_input.date()}' ORDER BY time(time)"
     arr_of_time = cursor.execute(question_to_database).fetchall()
     tmp = 1
     for each in arr_of_time:
@@ -185,3 +187,24 @@ def week_num_by_day(date):
     amount_days = todaydate - first_week
     week_num = math.ceil((amount_days.days + 1) / 7)
     return week_num
+
+def event_existense(date, chat_id):
+    arr_of_parameters = []
+    sqlite_connection = sqlite3.connect('Timetable_DB.db')
+    cursor = sqlite_connection.cursor()
+    question_to_database = cursor.execute(
+        f"SELECT event_id, time, event FROM user_events WHERE user_tg_id = '{chat_id}' AND date = '{date.date()}' ORDER BY event_id")
+    arr_of_parameters = question_to_database.fetchall()
+    if arr_of_parameters == []:
+        return False
+    else:
+        return True
+
+def event_id_arr(date, chat_id):
+    arr_of_parameters = []
+    sqlite_connection = sqlite3.connect('Timetable_DB.db')
+    cursor = sqlite_connection.cursor()
+    question_to_database = cursor.execute(
+        f"SELECT event_id FROM user_events WHERE user_tg_id = '{chat_id}' AND date = '{date.date()}' ORDER BY event_id")
+    arr_of_parameters = question_to_database.fetchall()
+    return arr_of_parameters

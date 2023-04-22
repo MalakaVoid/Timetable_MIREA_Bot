@@ -16,12 +16,29 @@ def get_inline_keyboard(id)->InlineKeyboardMarkup:
             [InlineKeyboardButton('Изменить номер группы',
                                   callback_data='change_group_num_main_btn')]
         ])
-    if id == 'timetable':
+    if id == 'without_event_timetable':
         ikb=InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton('Предыдуший день',
                                   callback_data='prev_day_tmtb_btn'),
              InlineKeyboardButton('Следующий день',
                                   callback_data='next_day_tmtb_btn')],
+            [InlineKeyboardButton('Добавить событие',
+                                  callback_data='add_event_tmtb_btn')],
+            [InlineKeyboardButton('Назад',
+                                  callback_data='back_tmtb_btn')]
+        ])
+    if id == 'with_event_timetable':
+        ikb=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton('Предыдуший день',
+                                  callback_data='prev_day_tmtb_btn'),
+             InlineKeyboardButton('Следующий день',
+                                  callback_data='next_day_tmtb_btn')],
+            [InlineKeyboardButton('Добавить событие',
+                                  callback_data='add_event_tmtb_btn')],
+            [InlineKeyboardButton('Изменить событие',
+                                  callback_data='change_event_tmtb_btn'),
+             InlineKeyboardButton('Удалить событие',
+                                  callback_data='delete_event_tmtb_btn')],
             [InlineKeyboardButton('Назад',
                                   callback_data='back_tmtb_btn')]
         ])
@@ -34,6 +51,13 @@ def get_inline_keyboard(id)->InlineKeyboardMarkup:
         ikb=InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton("Назад",
                                   callback_data='back_tmtb_btn')]
+        ])
+    if id == 'time_or_name_tmtb_btn':
+        ikb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton("Изменить время",
+                                  callback_data='edit_time_event_btn'),
+             InlineKeyboardButton("Изменить событие",
+                                  callback_data='edit_name_event_btn')]
         ])
     return ikb
 
