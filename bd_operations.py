@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, date
+import math
 import sqlite3
 
 def is_group_aviable(str_group):
@@ -14,7 +15,7 @@ def is_even(date):
     first_week = datetime(2023, 2, 5)
     todaydate = date
     amountDays = todaydate - first_week
-    if (amountDays.days // 7) % 2 == 0:
+    if math.ceil((amountDays.days + 1) / 7) == 0:
         return False
     else:
         return True
@@ -23,7 +24,7 @@ def is_even_current():
     first_week = datetime(2023, 2, 5)
     todaydate = datetime.today()
     amountDays = todaydate - first_week
-    if (amountDays.days // 7) % 2 == 0:
+    if math.ceil((amountDays.days + 1) / 7) == 0:
         return False
     else:
         return True
@@ -34,8 +35,8 @@ def current_week_timetable(user_id):
     str_output = "<b>Расписание на текущую неделю</b>" + "\n\n"
     sqlite_connection = sqlite3.connect('Timetable_DB.db')
     cursor = sqlite_connection.cursor()
-    question_to_database1 = cursor.execute(f"SELECT group_num FROM User WHERE user_tg_id = '{user_id}'")
-    group = question_to_database1.fetchall()[0][0]
+    question_to_database = cursor.execute(f"SELECT group_num FROM User WHERE user_tg_id = '{user_id}'")
+    group = question_to_database.fetchall()[0][0]
     datetime_date_input = datetime.today()
     current_date = current_day_of_the_week(datetime_date_input)
     if is_even(datetime_date_input):
@@ -95,7 +96,8 @@ def current_day_timetable(user_id, datetime_date_input):
         str_output += "<b>" + time + "</b>" + "\n"
         str_output += "<em>" + each[1] + "</em>" + "\n"
         str_output += each[2] + " | " + each[3] + " | " + each[4] + "\n\n"
-    str_output += current_day_events(user_id, datetime_date_input)
+    if datetime_date_input < datetime.today():
+        str_output += current_day_events(user_id, datetime_date_input)
     return str_output
 
 def group_to_bd(user_id, group):
@@ -115,13 +117,15 @@ def enter_event(chat_id, date, time, event):
     sqlite_connection = sqlite3.connect('Timetable_DB.db')
     cursor = sqlite_connection.cursor()
     question_to_database = cursor.execute(f"SELECT date, event, time FROM user_events WHERE user_tg_id = '{chat_id}' AND date = '{date}'")
-    if question_to_database.fetchall() == []:
+    arr_of_parameters = question_to_database.fetchall()
+    if arr_of_parameters == []:
         cursor.execute(f"INSERT INTO user_events (user_tg_id, date, event, time, event_id) VALUES ('{chat_id}', '{date}', '{event}', '{time}', '1')")
+        sqlite_connection.commit()
     else:
-        arr_of_parameters = question_to_database.fetchall()
         event_index = len(arr_of_parameters) + 1
         cursor.execute(f"INSERT INTO user_events (user_tg_id, date, event, time, event_id) VALUES ('{chat_id}', '{date}', '{event}', '{time}', '{event_index}')")
-    sqlite_connection.commit()
+        sqlite_connection.commit()
+    update_and_sort_events_by_id(date, chat_id)
     return "Ивент добавлен"
 
 def update_description_event(event, event_id, chat_id, date):
@@ -135,9 +139,10 @@ def update_description_event(event, event_id, chat_id, date):
 def update_time_event(time, event_id, chat_id, date):
     sqlite_connection = sqlite3.connect('Timetable_DB.db')
     cursor = sqlite_connection.cursor()
-    question_to_database = f"UPDATE user_events SET event = '{time}' WHERE event_id = '{event_id}' AND user_tg_id = '{chat_id}' AND date = '{date}'"
+    question_to_database = f"UPDATE user_events SET time = '{time}' WHERE event_id = '{event_id}' AND user_tg_id = '{chat_id}' AND date = '{date}'"
     cursor.execute(question_to_database)
     sqlite_connection.commit()
+    update_and_sort_events_by_id(date, chat_id)
     return "Время ивента обновлёно"
 
 def current_day_events(user_id, datetime_date_input):
@@ -145,7 +150,7 @@ def current_day_events(user_id, datetime_date_input):
     arr_of_parameters = []
     sqlite_connection = sqlite3.connect('Timetable_DB.db')
     cursor = sqlite_connection.cursor()
-    question_to_database = cursor.execute(f"SELECT event_id, time, event FROM user_events WHERE user_tg_id = '{user_id}' AND date = '{datetime_date_input}'")
+    question_to_database = cursor.execute(f"SELECT event_id, time, event FROM user_events WHERE user_tg_id = '{user_id}' AND date = '{datetime_date_input}' ORDER BY event_id")
     arr_of_parameters = question_to_database.fetchall()
     for arr in arr_of_parameters:
         for each_parametr in arr:
@@ -160,3 +165,23 @@ def delete_event(event_id, chat_id, date):
     cursor.execute(question_to_database)
     sqlite_connection.commit()
     return "Ивент удалён"
+
+def update_and_sort_events_by_id(datetime_date_input, chat_id):
+    arr_of_time = []
+    sqlite_connection = sqlite3.connect('Timetable_DB.db')
+    cursor = sqlite_connection.cursor()
+    question_to_database = f"SELECT time, id from user_events WHERE user_tg_id = '{chat_id}' AND date = '{datetime_date_input}' ORDER BY time(time)"
+    arr_of_time = cursor.execute(question_to_database).fetchall()
+    tmp = 1
+    for each in arr_of_time:
+        question_to_database = f"UPDATE user_events SET event_id = '{tmp}' WHERE time = '{each[0]}' AND id = {each[1]}"
+        cursor.execute(question_to_database)
+        tmp += 1
+        sqlite_connection.commit()
+
+def week_num_by_day(date):
+    first_week = datetime(2023, 2, 6)
+    todaydate = date
+    amount_days = todaydate - first_week
+    week_num = math.ceil((amount_days.days + 1) / 7)
+    return week_num
