@@ -9,7 +9,7 @@ from aiogram_calendar import SimpleCalendar, simple_cal_callback
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher.filters import Text
 from aiogram.dispatcher.filters.state import StatesGroup, State
-from bd_operations import current_week_timetable, current_day_timetable, group_to_bd, is_group_aviable, event_existense, enter_event, event_id_arr, delete_event, current_day_events
+from bd_operations import current_week_timetable, current_day_timetable, group_to_bd, is_group_aviable, event_existense, enter_event, event_id_arr, delete_event, current_day_events, update_time_event, update_description_event
 import sqlite3
 import re
 #Начальная инициализация
@@ -27,7 +27,8 @@ class AddEventSates(StatesGroup):
 class DelEvent(StatesGroup):
     event_num = State()
 class ChangeEvent(StatesGroup):
-    event_num = State
+    event_num = State()
+    choose = State()
     time = State()
     event_name = State()
 
@@ -43,7 +44,7 @@ async def start_command(message: types.Message, state: FSMContext)->None:
     await message.delete()
 
 #Удаление не нужных сообщений
-@dp.message_handler(state=None)
+@dp.message_handler(state=[None, ChangeEvent.choose])
 async def del_messages(message: types.Message):
     await message.delete()
 
@@ -81,16 +82,21 @@ async def get_event_time(message: types.Message, state: FSMContext):
         if int(arr_time[0]) < 24 and int(arr_time[1]) < 60:
             await bot.send_message(message.chat.id,
                                    text='<b>Введите событие</b>',
-                                   parse_mode='HTML')
+                                   parse_mode='HTML',
+                                   reply_markup=get_inline_keyboard('back_from_enddate'))
             async with state.proxy() as data:
                 data['time'] = message.text
                 await AddEventSates.next()
         else:
             await bot.send_message(chat_id=message.from_user.id,
-                                   text="Не правильное время, попробуйте еще раз.")
+                                   text="<b>Не правильное время, попробуйте еще раз.</b>",
+                                   parse_mode='HTML',
+                                   reply_markup=get_inline_keyboard('back_from_enddate'))
     else:
         await bot.send_message(chat_id=message.from_user.id,
-                               text="Не правильный формат времени, попробуйте еще раз.")
+                               text="<b>Не правильный формат времени, попробуйте еще раз.</b>",
+                               parse_mode='HTML',
+                               reply_markup=get_inline_keyboard('back_from_enddate'))
 
 @dp.message_handler(state=AddEventSates.event_name)
 async def get_event_name(message: types.Message, state: FSMContext):
@@ -151,9 +157,9 @@ async def get_del_event_id(message: types.Message, state: FSMContext):
 @dp.message_handler(state = ChangeEvent.event_num)
 async def get_edditing_event_num(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
-        arr_of_event_id = event_id_arr(data['date'], message.chat.id)
+        arr_of_event_id = event_id_arr(data['event_date'], message.chat.id)
         flag = False
-        date = data['date']
+        date = data['event_date']
         for each in arr_of_event_id:
             if each[0] == message.text:
                 flag = True
@@ -163,11 +169,52 @@ async def get_edditing_event_num(message: types.Message, state: FSMContext):
                                    text='<b>Выберите опцию</b>',
                                    parse_mode='HTML',
                                    reply_markup=get_inline_keyboard('time_or_name_tmtb_btn'))
+            await ChangeEvent.next()
         else:
             await bot.send_message(message.chat.id,
                                    text="<b>Неверный номер события, попробуйте еще раз</b>",
                                    parse_mode='HTML',
                                    reply_markup=get_inline_keyboard('back_from_enddate'))
+
+#Получение времени ивента для изменения
+@dp.message_handler(state=ChangeEvent.time)
+async def get_time_event_change(message: types.Message, state: FSMContext):
+    match = re.fullmatch(sampleTime, message.text)
+    if match != None:
+        arr_time = message.text.split(":")
+        if int(arr_time[0]) < 24 and int(arr_time[1]) < 60:
+            async with state.proxy() as data:
+                update_time_event(message.text, data['event_num'], message.chat.id, data['event_date'])
+                date = data['event_date']
+                await state.finish()
+                str_result = current_day_timetable(message.chat.id,
+                                                   date)
+                await bot.send_message(message.chat.id,
+                                       text=str_result,
+                                       reply_markup=get_inline_keyboard('with_event_timetable'),
+                                       parse_mode="HTML")
+        else:
+            await bot.send_message(chat_id=message.from_user.id,
+                                   text="<b>Не правильное время, попробуйте еще раз.</b>",
+                                   parse_mode='HTML',
+                                   reply_markup=get_inline_keyboard('back_from_enddate'))
+    else:
+        await bot.send_message(chat_id=message.from_user.id,
+                               text="Не правильный формат времени, попробуйте еще раз.",
+                               parse_mode='HTML',
+                               reply_markup=get_inline_keyboard('back_from_enddate'))
+@dp.message_handler(state=ChangeEvent.event_name)
+async def get_event_name_change(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        update_description_event(message.text, data['event_num'], message.chat.id, data['event_date'])
+        date = data['event_date']
+        str_result = current_day_timetable(message.chat.id,
+                                           date)
+        await bot.send_message(message.chat.id,
+                               text=str_result,
+                               reply_markup=get_inline_keyboard('with_event_timetable'),
+                               parse_mode="HTML")
+
 #Главное меню
 async def main_menu_message(callback):
     await callback.message.edit_text(text="<b>Получить расписание на (выберите одно из указанных ниже)</b>",
@@ -285,6 +332,7 @@ async def ik_cb_tmtb_handler(callback: types.CallbackQuery, state: FSMContext):
             await callback.message.edit_text(text=str_result,
                                              reply_markup=get_inline_keyboard('without_event_timetable'),
                                              parse_mode="HTML")
+    #Обработчик кнопки Добавить событие
     elif callback.data == 'add_event_tmtb_btn':
         await callback.message.edit_text('<b>Введите время события</b>\n'
                                          '<em>Формат: 00:00</em>',
@@ -296,6 +344,7 @@ async def ik_cb_tmtb_handler(callback: types.CallbackQuery, state: FSMContext):
                                  "%d.%m.%Y")
         async with state.proxy() as data:
             data['date_event'] = date
+    #Обработчик кнопки Удалить событие
     elif callback.data == 'delete_event_tmtb_btn':
         date = datetime.strptime(re.findall(sampleDate,
                                             callback.message.text)[0],
@@ -311,6 +360,7 @@ async def ik_cb_tmtb_handler(callback: types.CallbackQuery, state: FSMContext):
         await DelEvent.event_num.set()
         async with state.proxy() as data:
             data['date']=date
+    #Обработчи кнопки ИЗМЕНИТЬ
     elif callback.data == 'change_event_tmtb_btn':
         date = datetime.strptime(re.findall(sampleDate,
                                             callback.message.text)[0],
@@ -320,6 +370,9 @@ async def ik_cb_tmtb_handler(callback: types.CallbackQuery, state: FSMContext):
             str_output += each[0] + ' '
         str_output += '</b>\n\n'
         str_output += current_day_events(callback.message.chat.id, date)
+        await callback.message.edit_text(text=str_output,
+                                   parse_mode='HTML',
+                                   reply_markup=get_inline_keyboard('back_from_enddate'))
         await ChangeEvent.event_num.set()
         async with state.proxy() as data:
             data['event_date'] = date
@@ -327,14 +380,33 @@ async def ik_cb_tmtb_handler(callback: types.CallbackQuery, state: FSMContext):
     elif callback.data == 'back_tmtb_btn':
         await main_menu_message(callback)
 
+#Обработчик клавиатуры при изменении события
+@dp.callback_query_handler(lambda callback_querry: callback_querry.data.endswith('event_btn'), state=[ChangeEvent.choose, None])
+async def choose_changing_item(callback: types.CallbackQuery, state: FSMContext):
+    cur_state = await state.get_state()
+    if callback.data in ['edit_time_event_btn','edit_name_event_btn'] and cur_state is None:
+        await callback.message.edit_reply_markup(reply_markup=None)
+    elif callback.data == 'edit_time_event_btn':
+        await callback.message.edit_text(text='<b>Введите время</b>\n'
+                                              '<em>Формат 00:00</em>',
+                                         reply_markup=get_inline_keyboard('back_from_enddate'),
+                                         parse_mode='HTML')
+        await ChangeEvent.next()
+    elif callback.data == 'edit_name_event_btn':
+        await callback.message.edit_text(text='<b>Введите текст события</b>',
+                                         reply_markup=get_inline_keyboard('back_from_enddate'),
+                                         parse_mode='HTML')
+        await ChangeEvent.next()
+        await ChangeEvent.next()
+
 #обработчик клавиатуры Отмены
 @dp.callback_query_handler(lambda callback_querry: callback_querry.data.endswith('end_btn'), state='*')
 async def ik_cb_end_handler(callback: types.CallbackQuery, state: FSMContext):
     #Обработка кнопки отменить при вводе даты пользователем и ввода группы
     cur_state = await state.get_state()
     if callback.data == 'back_end_btn' and cur_state is not None:
-        if cur_state in ['GroupStates:group', 'AddEventSates:time', 'AddEventSates:event_name', 'DelEvent:event_num', 'ChangeEvent.event_num',
-                         'ChangeEvent.event_name', 'ChangeEvent.time']:
+        if cur_state in ['GroupStates:group', 'AddEventSates:time', 'AddEventSates:event_name', 'DelEvent:event_num', 'ChangeEvent:event_num',
+                         'ChangeEvent:event_name', 'ChangeEvent:time', 'ChangeEvent:choose']:
             await bot.send_message(chat_id=callback.message.chat.id,
                                    text="<b>Получить расписание на (выберите одно из указанных ниже)</b>",
                                    reply_markup=get_inline_keyboard('main_menu'),
