@@ -12,11 +12,13 @@ from aiogram.dispatcher.filters.state import StatesGroup, State
 from bd_operations import current_week_timetable, current_day_timetable, group_to_bd, is_group_aviable, event_existense, enter_event, event_id_arr, delete_event, current_day_events, update_time_event, update_description_event
 import sqlite3
 import re
+
 #Начальная инициализация
 bot = Bot(TOKEN_API)
 storage = MemoryStorage()
 dp = Dispatcher(bot,
                 storage=storage)
+
 #Состояния бота
 class GroupStates(StatesGroup):
     group = State()
@@ -34,7 +36,7 @@ class ChangeEvent(StatesGroup):
 
 #Обработчик команды /start
 @dp.message_handler(commands=['start'])
-async def start_command(message: types.Message, state: FSMContext)->None:
+async def start_command(message: types.Message, state: FSMContext):
     await bot.send_message(chat_id=message.from_user.id,
                            text="<b>Добро пожаловать!\n"
                                 "Чтобы получить расписание, введите номер вашей группы.</b>\n"
@@ -53,9 +55,9 @@ async def del_messages(message: types.Message):
 async def get_group(message: types.Message, state: FSMContext):
     match = re.fullmatch(sampleGroup, message.text)
     if match != None:
-        #функция проверки существования данной группы!!!!!!!!!!
+        #функция проверки существования данной группы
         if is_group_aviable(message.text):
-            #Добавление в базу данных id пользователя и номер группы!!!!!!!!!!!
+            #Добавление в базу данных id пользователя и номер группы
             group_to_bd(message.chat.id, message.text)
             await bot.send_message(message.from_user.id,
                                    text="<b>Получить расписание на (выберите одно из указанных ниже)</b>",
@@ -203,6 +205,7 @@ async def get_time_event_change(message: types.Message, state: FSMContext):
                                text="Не правильный формат времени, попробуйте еще раз.",
                                parse_mode='HTML',
                                reply_markup=get_inline_keyboard('back_from_enddate'))
+
 @dp.message_handler(state=ChangeEvent.event_name)
 async def get_event_name_change(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
