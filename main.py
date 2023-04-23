@@ -60,7 +60,7 @@ async def get_group(message: types.Message, state: FSMContext):
             #Добавление в базу данных id пользователя и номер группы
             group_to_bd(message.chat.id, message.text)
             await bot.send_message(message.from_user.id,
-                                   text="<b>Получить расписание на (выберите одно из указанных ниже)</b>",
+                                   text="<b>Выберите опцию для получения расписания и работы с событиями</b>",
                                    parse_mode="HTML",
                                    reply_markup=get_inline_keyboard('main_menu'))
             await state.finish()
@@ -83,7 +83,7 @@ async def get_event_time(message: types.Message, state: FSMContext):
         arr_time = message.text.split(":")
         if int(arr_time[0]) < 24 and int(arr_time[1]) < 60:
             await bot.send_message(message.chat.id,
-                                   text='<b>Введите событие</b>',
+                                   text='<b>Введите описание</b>',
                                    parse_mode='HTML',
                                    reply_markup=get_inline_keyboard('back_from_enddate'))
             async with state.proxy() as data:
@@ -220,7 +220,7 @@ async def get_event_name_change(message: types.Message, state: FSMContext):
 
 #Главное меню
 async def main_menu_message(callback):
-    await callback.message.edit_text(text="<b>Получить расписание на (выберите одно из указанных ниже)</b>",
+    await callback.message.edit_text(text="<b>Выберите опцию для получения расписания и работы с событиями</b>",
                                      parse_mode="HTML",
                                      reply_markup=get_inline_keyboard('main_menu'))
 
@@ -396,7 +396,7 @@ async def choose_changing_item(callback: types.CallbackQuery, state: FSMContext)
                                          parse_mode='HTML')
         await ChangeEvent.next()
     elif callback.data == 'edit_name_event_btn':
-        await callback.message.edit_text(text='<b>Введите текст события</b>',
+        await callback.message.edit_text(text='<b>Введите описание события</b>',
                                          reply_markup=get_inline_keyboard('back_from_enddate'),
                                          parse_mode='HTML')
         await ChangeEvent.next()
