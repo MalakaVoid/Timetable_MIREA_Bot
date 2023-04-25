@@ -2,7 +2,7 @@ from aiogram import Dispatcher, Bot, executor,types
 from aiogram.dispatcher import FSMContext
 from aiogram.types import ReplyKeyboardMarkup,ReplyKeyboardRemove, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from aiogram.utils.callback_data import CallbackData
-from globals import TOKEN_API, sampleGroup, sampleDate, sampleTime
+from globals import TOKEN_API, sampleGroup, sampleDate, sampleTime, admin_chat_id
 from datetime import datetime, timedelta
 from keyboards import get_inline_keyboard
 from aiogram_calendar import SimpleCalendar, simple_cal_callback
@@ -33,6 +33,8 @@ class ChangeEvent(StatesGroup):
     choose = State()
     time = State()
     event_name = State()
+class GetSupport(StatesGroup):
+    mes_sup = State()
 
 #Обработчик команды /start
 @dp.message_handler(commands=['start'])
@@ -103,23 +105,23 @@ async def get_event_time(message: types.Message, state: FSMContext):
 @dp.message_handler(state=AddEventSates.event_name)
 async def get_event_name(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
-        date=data['date_event']
-        enter_event(message.chat.id, data['date_event'], data['time'], message.text)
+        date = data['date_event']
+        enter_event(message.chat.id,
+                    data['date_event'],
+                    data['time'],
+                    message.text)
+    str_inl_kb = None
     if event_existense(date,
                        message.chat.id):
-        str_result = current_day_timetable(message.chat.id,
-                                           date)
-        await bot.send_message(message.chat.id,
-                               text=str_result,
-                               reply_markup=get_inline_keyboard('with_event_timetable'),
-                               parse_mode="HTML")
+        str_inl_kb = 'with_event_timetable'
     else:
-        str_result = current_day_timetable(message.chat.id,
-                                           date)
-        await bot.send_message(message.chat.id,
-                               text=str_result,
-                               reply_markup=get_inline_keyboard('without_event_timetable'),
-                               parse_mode="HTML")
+        str_inl_kb = 'without_event_timetable'
+    str_result = current_day_timetable(message.chat.id,
+                                       date)
+    await bot.send_message(message.chat.id,
+                           text=str_result,
+                           reply_markup=get_inline_keyboard(str_inl_kb),
+                           parse_mode="HTML")
     await state.finish()
 
 #Удаление ивента, получение id ивента
@@ -135,31 +137,29 @@ async def get_del_event_id(message: types.Message, state: FSMContext):
         if flag:
             delete_event(message.text, message.chat.id, data['date'])
             await state.finish()
+            str_inl_kb = None
             if event_existense(date,
                                message.chat.id):
-                str_result = current_day_timetable(message.chat.id,
-                                                   date)
-                await bot.send_message(message.chat.id,
-                                       text=str_result,
-                                       reply_markup=get_inline_keyboard('with_event_timetable'),
-                                       parse_mode="HTML")
+                str_inl_kb = 'with_event_timetable'
             else:
-                str_result = current_day_timetable(message.chat.id,
-                                                   date)
-                await bot.send_message(message.chat.id,
-                                       text=str_result,
-                                       reply_markup=get_inline_keyboard('without_event_timetable'),
-                                       parse_mode="HTML")
+                str_inl_kb = 'without_event_timetable'
+            str_result = current_day_timetable(message.chat.id,
+                                               date)
+            await bot.send_message(message.chat.id,
+                                   text=str_result,
+                                   reply_markup=get_inline_keyboard(str_inl_kb),
+                                   parse_mode="HTML")
         else:
             await bot.send_message(message.chat.id,
                                    text="<b>Неверный номер события, попробуйте еще раз</b>",
                                    parse_mode='HTML',
                                    reply_markup=get_inline_keyboard('back_from_enddate'))
-
+#Получение номера события для изменения
 @dp.message_handler(state = ChangeEvent.event_num)
 async def get_edditing_event_num(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
-        arr_of_event_id = event_id_arr(data['event_date'], message.chat.id)
+        arr_of_event_id = event_id_arr(data['event_date'],
+                                       message.chat.id)
         flag = False
         date = data['event_date']
         for each in arr_of_event_id:
@@ -186,7 +186,10 @@ async def get_time_event_change(message: types.Message, state: FSMContext):
         arr_time = message.text.split(":")
         if int(arr_time[0]) < 24 and int(arr_time[1]) < 60:
             async with state.proxy() as data:
-                update_time_event(message.text, data['event_num'], message.chat.id, data['event_date'])
+                update_time_event(message.text,
+                                  data['event_num'],
+                                  message.chat.id,
+                                  data['event_date'])
                 date = data['event_date']
                 await state.finish()
                 str_result = current_day_timetable(message.chat.id,
@@ -205,11 +208,14 @@ async def get_time_event_change(message: types.Message, state: FSMContext):
                                text="Не правильный формат времени, попробуйте еще раз.",
                                parse_mode='HTML',
                                reply_markup=get_inline_keyboard('back_from_enddate'))
-
+#Изменение текста события
 @dp.message_handler(state=ChangeEvent.event_name)
 async def get_event_name_change(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
-        update_description_event(message.text, data['event_num'], message.chat.id, data['event_date'])
+        update_description_event(message.text,
+                                 data['event_num'],
+                                 message.chat.id,
+                                 data['event_date'])
         date = data['event_date']
         str_result = current_day_timetable(message.chat.id,
                                            date)
@@ -217,6 +223,22 @@ async def get_event_name_change(message: types.Message, state: FSMContext):
                                text=str_result,
                                reply_markup=get_inline_keyboard('with_event_timetable'),
                                parse_mode="HTML")
+#Получения сообщения для тех поддержки
+@dp.message_handler(state=GetSupport.mes_sup)
+async def message_to_support(message: types.Message, state: FSMContext):
+    await bot.send_message(admin_chat_id,
+                           text=f'<b>{datetime.today().strftime("%d.%m.%Y %H:%M:%S")}</b>\n'
+                                f'Сообщение от пользователя:\n'
+                                f'Номер: {message.from_user.url}\n'
+                                f'Chat id: {message.chat.id}\n'
+                                f'<em>{message.text}</em>',
+                           parse_mode='HTML')
+    await state.finish()
+    await bot.send_message(message.chat.id,
+                           text="<b>Запрос отправлен. В скором времени с вами свяжутся, либо проблема будет решена!</b>",
+                           parse_mode="HTML",
+                           reply_markup=get_inline_keyboard('back_from_week_table'))
+
 
 #Главное меню
 async def main_menu_message(callback):
@@ -229,35 +251,34 @@ async def main_menu_message(callback):
 async def ik_cb_main_handler(callback: types.CallbackQuery, state: FSMContext):
     #Выдача расписания на сегодня
     if callback.data == 'today_main_btn':
+        str_inl_kb = None
         if event_existense(datetime.today(),
                            callback.message.chat.id):
-            str_result = current_day_timetable(callback.message.chat.id,
-                                               datetime.today())
-            await callback.message.edit_text(text=str_result,
-                                             reply_markup=get_inline_keyboard('with_event_timetable'),
-                                             parse_mode="HTML")
+            str_inl_kb = 'with_event_timetable'
         else:
-            str_result = current_day_timetable(callback.message.chat.id,
-                                               datetime.today())
-            await callback.message.edit_text(text=str_result,
-                                             reply_markup=get_inline_keyboard('without_event_timetable'),
-                                             parse_mode="HTML")
+            str_inl_kb = 'without_event_timetable'
+        str_result = current_day_timetable(callback.message.chat.id,
+                                           datetime.today())
+        await callback.message.edit_text(text=str_result,
+                                         reply_markup=get_inline_keyboard(str_inl_kb),
+                                         parse_mode="HTML")
+
     #Выдача расписания на завтра
     elif callback.data == 'tommorow_main_btn':
         one_day = timedelta(days=1)
+        str_inl_kb = None
         if event_existense(datetime.today() + one_day,
                            callback.message.chat.id):
-            str_result = current_day_timetable(callback.message.chat.id,
-                                               datetime.today() + one_day)
-            await callback.message.edit_text(text=str_result,
-                                             reply_markup=get_inline_keyboard('with_event_timetable'),
-                                             parse_mode="HTML")
+            str_inl_kb = 'with_event_timetable'
         else:
-            str_result = current_day_timetable(callback.message.chat.id,
-                                               datetime.today() + one_day)
-            await callback.message.edit_text(text=str_result,
-                                             reply_markup=get_inline_keyboard('without_event_timetable'),
-                                             parse_mode="HTML")
+            str_inl_kb = 'without_event_timetable'
+
+        str_result = current_day_timetable(callback.message.chat.id,
+                                           datetime.today() + one_day)
+        await callback.message.edit_text(text=str_result,
+                                         reply_markup=get_inline_keyboard(str_inl_kb),
+                                         parse_mode="HTML")
+
     #Выдача расписания на неделю
     elif callback.data == 'week_main_btn':
         str_result = current_week_timetable(callback.message.chat.id)
@@ -276,25 +297,30 @@ async def ik_cb_main_handler(callback: types.CallbackQuery, state: FSMContext):
         await callback.message.edit_text(text='<b>Выберите дату:</b>',
                                          reply_markup=await SimpleCalendar().start_calendar(),
                                          parse_mode='HTML')
+    #Обработка кнопки тех поддержки
+    elif callback.data == 'get_support_main_btn':
+        await callback.message.edit_text(text='<b>Опишите вашу проблему</b>',
+                                         parse_mode='HTML',
+                                         reply_markup=get_inline_keyboard('back_from_enddate'))
+        await GetSupport.mes_sup.set()
 #Handler календаря
 @dp.callback_query_handler(simple_cal_callback.filter())
 async def process_simple_calendar(callback_query: CallbackQuery, callback_data: dict):
     selected, date = await SimpleCalendar().process_selection(callback_query,
                                                               callback_data)
     if selected:
+        str_inl_kb = None
         if event_existense(date,
                            callback_query.message.chat.id):
-            str_result = current_day_timetable(callback_query.message.chat.id,
-                                               date)
-            await callback_query.message.edit_text(text=str_result,
-                                                   reply_markup=get_inline_keyboard('with_event_timetable'),
-                                                   parse_mode="HTML")
+            str_inl_kb = 'with_event_timetable'
         else:
-            str_result = current_day_timetable(callback_query.message.chat.id,
-                                               date)
-            await callback_query.message.edit_text(text=str_result,
-                                                   reply_markup=get_inline_keyboard('without_event_timetable'),
-                                                   parse_mode="HTML")
+            str_inl_kb = 'without_event_timetable'
+
+        str_result = current_day_timetable(callback_query.message.chat.id,
+                                           date)
+        await callback_query.message.edit_text(text=str_result,
+                                               reply_markup=get_inline_keyboard(str_inl_kb),
+                                               parse_mode="HTML")
 
 #Обработчик клавиатуры расписания
 @dp.callback_query_handler(lambda callback_querry: callback_querry.data.endswith('tmtb_btn'), state='*')
@@ -305,36 +331,34 @@ async def ik_cb_tmtb_handler(callback: types.CallbackQuery, state: FSMContext):
         date = datetime.strptime(re.findall(sampleDate,
                                             callback.message.text)[0],
                                  "%d.%m.%Y")
+        str_inl_kb = None
         if event_existense(date+one_day,
                            callback.message.chat.id):
-            str_result = current_day_timetable(callback.message.chat.id,
-                                               date + one_day)
-            await callback.message.edit_text(text=str_result,
-                                             reply_markup=get_inline_keyboard('with_event_timetable'),
-                                             parse_mode="HTML")
+            str_inl_kb = 'with_event_timetable'
         else:
-            str_result = current_day_timetable(callback.message.chat.id,
-                                               date + one_day)
-            await callback.message.edit_text(text=str_result,
-                                             reply_markup=get_inline_keyboard('without_event_timetable'),
-                                             parse_mode="HTML")
+            str_inl_kb = 'without_event_timetable'
+
+        str_result = current_day_timetable(callback.message.chat.id,
+                                           date + one_day)
+        await callback.message.edit_text(text=str_result,
+                                         reply_markup=get_inline_keyboard(str_inl_kb),
+                                         parse_mode="HTML")
+    #Обработка предыдущего дня расписания
     elif callback.data == 'prev_day_tmtb_btn':
         date = datetime.strptime(re.findall(sampleDate,
                                             callback.message.text)[0],
                                  "%d.%m.%Y")
+        str_inl_kb = None
         if event_existense(date-one_day,
                            callback.message.chat.id):
-            str_result = current_day_timetable(callback.message.chat.id,
-                                               date - one_day)
-            await callback.message.edit_text(text=str_result,
-                                             reply_markup=get_inline_keyboard('with_event_timetable'),
-                                             parse_mode="HTML")
+            str_inl_kb = 'with_event_timetable'
         else:
-            str_result = current_day_timetable(callback.message.chat.id,
-                                               date - one_day)
-            await callback.message.edit_text(text=str_result,
-                                             reply_markup=get_inline_keyboard('without_event_timetable'),
-                                             parse_mode="HTML")
+            str_inl_kb = 'without_event_timetable'
+        str_result = current_day_timetable(callback.message.chat.id,
+                                           date - one_day)
+        await callback.message.edit_text(text=str_result,
+                                         reply_markup=get_inline_keyboard(str_inl_kb),
+                                         parse_mode="HTML")
     #Обработчик кнопки Добавить событие
     elif callback.data == 'add_event_tmtb_btn':
         await callback.message.edit_text('<b>Введите время события</b>\n'
@@ -354,15 +378,16 @@ async def ik_cb_tmtb_handler(callback: types.CallbackQuery, state: FSMContext):
                                  "%d.%m.%Y")
         str_output = '<b>Введите номер события для удаления: '
         for each in event_id_arr(date ,callback.message.chat.id):
-          str_output+=  each[0] + ' '
+            str_output+=  each[0] + ' '
         str_output += '</b>\n\n'
-        str_output += current_day_events(callback.message.chat.id, date)
+        str_output += current_day_events(callback.message.chat.id,
+                                         date)
         await callback.message.edit_text(text=str_output,
-                               parse_mode='HTML',
-                               reply_markup=get_inline_keyboard('back_from_enddate'))
+                                         parse_mode='HTML',
+                                         reply_markup=get_inline_keyboard('back_from_enddate'))
         await DelEvent.event_num.set()
         async with state.proxy() as data:
-            data['date']=date
+            data['date'] = date
     #Обработчи кнопки ИЗМЕНИТЬ
     elif callback.data == 'change_event_tmtb_btn':
         date = datetime.strptime(re.findall(sampleDate,
@@ -374,8 +399,8 @@ async def ik_cb_tmtb_handler(callback: types.CallbackQuery, state: FSMContext):
         str_output += '</b>\n\n'
         str_output += current_day_events(callback.message.chat.id, date)
         await callback.message.edit_text(text=str_output,
-                                   parse_mode='HTML',
-                                   reply_markup=get_inline_keyboard('back_from_enddate'))
+                                         parse_mode='HTML',
+                                         reply_markup=get_inline_keyboard('back_from_enddate'))
         await ChangeEvent.event_num.set()
         async with state.proxy() as data:
             data['event_date'] = date
@@ -387,7 +412,7 @@ async def ik_cb_tmtb_handler(callback: types.CallbackQuery, state: FSMContext):
 @dp.callback_query_handler(lambda callback_querry: callback_querry.data.endswith('event_btn'), state=[ChangeEvent.choose, None])
 async def choose_changing_item(callback: types.CallbackQuery, state: FSMContext):
     cur_state = await state.get_state()
-    if callback.data in ['edit_time_event_btn','edit_name_event_btn'] and cur_state is None:
+    if callback.data in ['edit_time_event_btn', 'edit_name_event_btn'] and cur_state is None:
         await callback.message.edit_reply_markup(reply_markup=None)
     elif callback.data == 'edit_time_event_btn':
         await callback.message.edit_text(text='<b>Введите время</b>\n'
@@ -409,7 +434,7 @@ async def ik_cb_end_handler(callback: types.CallbackQuery, state: FSMContext):
     cur_state = await state.get_state()
     if callback.data == 'back_end_btn' and cur_state is not None:
         if cur_state in ['GroupStates:group', 'AddEventSates:time', 'AddEventSates:event_name', 'DelEvent:event_num', 'ChangeEvent:event_num',
-                         'ChangeEvent:event_name', 'ChangeEvent:time', 'ChangeEvent:choose']:
+                         'ChangeEvent:event_name', 'ChangeEvent:time', 'ChangeEvent:choose', 'GetSupport:mes_sup']:
             await bot.send_message(chat_id=callback.message.chat.id,
                                    text="<b>Получить расписание на (выберите одно из указанных ниже)</b>",
                                    reply_markup=get_inline_keyboard('main_menu'),
@@ -422,4 +447,5 @@ async def ik_cb_end_handler(callback: types.CallbackQuery, state: FSMContext):
         await callback.message.edit_reply_markup(reply_markup=None)
 
 if __name__ == '__main__':
-    executor.start_polling(dp, skip_updates=True)
+    executor.start_polling(dp,
+                           skip_updates=True)

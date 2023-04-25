@@ -33,6 +33,9 @@ def current_week_timetable(user_id):
     arr_of_parameters = []
     arr_days = ["ПОНЕДЕЛЬНИК", "ВТОРНИК", "СРЕДА", "ЧЕТВЕРГ", "ПЯТНИЦА", "СУББОТА"]
     str_output = "<b>Расписание на текущую неделю</b>" + "\n\n"
+    if datetime.today() < datetime(year=2023, month=2, day=6) or datetime.today() > datetime(year=2023, month=6, day=4):
+        str_output += '<b>У вас нет пар!</b>\n\n'
+        return str_output
     sqlite_connection = sqlite3.connect('Timetable_DB.db')
     cursor = sqlite_connection.cursor()
     question_to_database = cursor.execute(f"SELECT group_num FROM User WHERE user_tg_id = '{user_id}'")
@@ -83,6 +86,10 @@ def current_day_timetable(user_id, datetime_date_input):
     group = question_to_database1.fetchall()[0][0]
     current_date = current_day_of_the_week(datetime_date_input)
     str_output = f"<b>Расписание на {datetime_date_input.strftime('%d.%m.%Y')}</b>" + "\n\n"
+    if datetime_date_input < datetime(year=2023, month=2, day=6) or datetime_date_input > datetime(year=2023, month=6, day=4):
+        str_output += '<b>У вас нет пар!</b>\n\n'
+        str_output += current_day_events(user_id, datetime_date_input)
+        return str_output
     if is_even(datetime_date_input):
         even_num = "II"
     else:
@@ -280,10 +287,3 @@ def array_of_exceptions(str_input):
         arr_output = str_input.split()
         arr_output = arr_output[0].split(",")
     return arr_output
-
-
-#print(array_of_exceptions("кр. 1,3,5,17 н. Методы и средства цифровой обработки сигналов"))
-#current_day_timetable_upd(1224454, datetime(2023, 4, 27))
-print(current_day_timetable(1224454, datetime(2023, 3, 31)))
-#print(is_even(datetime(2023, 3, 31)))
-#print(week_num_by_day(datetime(2023, 3, 31)))

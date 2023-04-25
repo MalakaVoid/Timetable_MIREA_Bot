@@ -13,8 +13,10 @@ def get_inline_keyboard(id)->InlineKeyboardMarkup:
                                   callback_data='calendar_main_btn')],
             [InlineKeyboardButton('Эта неделя',
                                   callback_data='week_main_btn')],
-            [InlineKeyboardButton('Изменить номер группы',
-                                  callback_data='change_group_num_main_btn')]
+            [InlineKeyboardButton('Изменить группу',
+                                  callback_data='change_group_num_main_btn'),
+            InlineKeyboardButton('Написать в тех поддержку',
+                                  callback_data='get_support_main_btn')]
         ])
     if id == 'without_event_timetable':
         ikb=InlineKeyboardMarkup(inline_keyboard=[
