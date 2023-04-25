@@ -15,10 +15,10 @@ def is_even(date):
     first_week = datetime(2023, 2, 5)
     todaydate = date
     amountDays = todaydate - first_week
-    if math.ceil((amountDays.days + 1) / 7) == 0:
-        return False
-    else:
+    if week_num_by_day(date) % 2 == 0:
         return True
+    else:
+        return False
 
 def is_even_current():
     first_week = datetime(2023, 2, 5)
@@ -90,11 +90,36 @@ def current_day_timetable(user_id, datetime_date_input):
     question_to_database = cursor.execute(f"SELECT interval_pairs, name, type, place, teacher_name FROM timetable WHERE group_num = '{group}' AND day_of_week = '{current_date}' AND even = '{even_num}'")
     arr_of_parameters = question_to_database.fetchall()
     for each in arr_of_parameters:
+        flag = False
+        if is_exception_remove(each[1]):
+            exception_arr = array_of_exceptions(each[1])
+            num_of_week = week_num_by_day(datetime_date_input)
+            for num in exception_arr:
+                if num_of_week == int(num):
+                    flag = True
+                    break
+            if flag:
+                continue
+            else:
+                pair = exception_controller(each[1])
+        elif is_exception_add(each[1]):
+            exception_arr = array_of_exceptions(each[1])
+            num_of_week = week_num_by_day(datetime_date_input)
+            for num in exception_arr:
+                if num_of_week == int(num):
+                    flag = True
+                    break
+            if flag:
+                pair = exception_controller(each[1])
+            else:
+                continue
+        else:
+            pair = each[1]
         time = each[0]
         time = time.replace("-", ":")
         time = time.replace(" ", "-")
         str_output += "<b>" + time + "</b>" + "\n"
-        str_output += "<em>" + each[1] + "</em>" + "\n"
+        str_output += "<em>" + pair + "</em>" + "\n"
         str_output += each[2] + " | " + each[3] + " | " + each[4] + "\n\n"
 
     str_output += current_day_events(user_id, datetime_date_input)
@@ -208,3 +233,57 @@ def event_id_arr(date, chat_id):
         f"SELECT event_id FROM user_events WHERE user_tg_id = '{chat_id}' AND date = '{date.date()}' ORDER BY event_id")
     arr_of_parameters = question_to_database.fetchall()
     return arr_of_parameters
+
+def current_day_timetable_upd(user_id, datetime_date_input):
+    arr_of_parameters = []
+    sqlite_connection = sqlite3.connect('Timetable_DB.db')
+    cursor = sqlite_connection.cursor()
+    question_to_database1 = cursor.execute(f"SELECT group_num FROM User WHERE user_tg_id = '{user_id}'")
+    group = question_to_database1.fetchall()[0][0]
+    current_date = current_day_of_the_week(datetime_date_input)
+    question_to_database = cursor.execute(f"SELECT interval_pairs, name, type, place, teacher_name FROM timetable WHERE group_num = '{group}' AND day_of_week = '{current_date}'")
+    arr_of_parameters = []
+    arr_of_parameters = question_to_database.fetchall()
+    print(arr_of_parameters)
+
+def exception_controller(str_input):
+    str_output = ""
+    if is_exception_remove(str_input) or is_exception_add(str_input):
+        index = str_input.rfind("н. ") + 3
+        str_output = str_input[index::]
+    else:
+        str_output = str_input
+    return str_output
+
+def is_exception_remove(str_input):
+    if "кр." in str_input:
+        return True
+    else:
+        return False
+
+def is_exception_add(str_input):
+    if not is_exception_remove(str_input) and "н." in str_input:
+        return True
+    else:
+        return False
+
+def array_of_exceptions(str_input):
+    arr_output = []
+    if is_exception_remove(str_input):
+        index = str_input.rfind("н. ") + 3
+        str_input = str_input[:index:]
+        arr_output = str_input.split()
+        arr_output = arr_output[1].split(",")
+    elif is_exception_add(str_input):
+        index = str_input.rfind("н. ") + 3
+        str_input = str_input[:index:]
+        arr_output = str_input.split()
+        arr_output = arr_output[0].split(",")
+    return arr_output
+
+
+#print(array_of_exceptions("кр. 1,3,5,17 н. Методы и средства цифровой обработки сигналов"))
+#current_day_timetable_upd(1224454, datetime(2023, 4, 27))
+print(current_day_timetable(1224454, datetime(2023, 3, 31)))
+#print(is_even(datetime(2023, 3, 31)))
+#print(week_num_by_day(datetime(2023, 3, 31)))
