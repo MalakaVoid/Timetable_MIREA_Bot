@@ -1,9 +1,17 @@
 import sqlite3
 from openpyxl import load_workbook
 import re
+import os
 
-def group_index(group):
-    workbook = load_workbook('temp.xlsx')
+
+def file_names():
+    dir_path = os.path.abspath('Excel files')
+    content = os.listdir(dir_path)
+    return content
+
+
+def group_index(group, file_name):
+    workbook = load_workbook(file_name)
     ws = workbook[workbook.sheetnames[0]]
     index = 0
     for i in range(1, 500):
@@ -12,9 +20,10 @@ def group_index(group):
             break
     return index
 
-def group_arr():
+
+def group_arr(file_name):
     array_of_groups = []
-    workbook = load_workbook('temp.xlsx')
+    workbook = load_workbook(file_name)
     ws = workbook[workbook.sheetnames[0]]
     sampleGroup = '\w{4}-\d\d-\d\d'
     for i in range(1, 500):
@@ -23,12 +32,13 @@ def group_arr():
             array_of_groups.append(ws.cell(row=2, column=i).value)
     return array_of_groups
 
-def parse_group_to_database(group):
-    workbook = load_workbook('temp.xlsx')
+
+def parse_group_to_database(group, file_name):
+    workbook = load_workbook(file_name)
     ws = workbook[workbook.sheetnames[0]]
     sqlite_connection = sqlite3.connect('Timetable_DB.db')
     cursor = sqlite_connection.cursor()
-    index = group_index(str(group))
+    index = group_index(str(group), file_name)
     weekday_name = ""
     for j in range(4, 88):
         even = ""
@@ -65,3 +75,13 @@ def parse_group_to_database(group):
                                    f"VALUES ('{group}', '{even}', '{weekday_name}', '{time}', '{subject_name}', '{lect_or_prac}', '{place}', '{teacher}')"
             cursor.execute(question_to_database)
             sqlite_connection.commit()
+
+
+arr_of_files = file_names()
+counter = 0
+for file in arr_of_files:
+    array_of_groups = group_arr(f'Excel files/{file}')
+    counter += 1
+    print(counter)
+    for each_group in array_of_groups:
+        parse_group_to_database(each_group, f'Excel files/{file}')
