@@ -229,7 +229,7 @@ async def message_to_support(message: types.Message, state: FSMContext):
     await bot.send_message(admin_chat_id,
                            text=f'<b>{datetime.today().strftime("%d.%m.%Y %H:%M:%S")}</b>\n'
                                 f'Сообщение от пользователя:\n'
-                                f'Номер: {message.from_user.url}\n'
+                                f'Ссылка на пользователя: {message.from_user.url}\n'
                                 f'Chat id: {message.chat.id}\n'
                                 f'<em>{message.text}</em>',
                            parse_mode='HTML')
